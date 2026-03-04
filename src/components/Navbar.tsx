@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -15,7 +14,7 @@ import { useFirestore } from "@/firebase";
 export function Navbar() {
   const { t } = useTranslation();
   const db = useFirestore();
-  const { user, loading } = useUser();
+  const { user, loading: userLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
 
@@ -41,49 +40,52 @@ export function Navbar() {
               Mwaliko App<span className="text-accent">.</span>
             </span>
           </Link>
-          {!isStaff && (
-            <div className="hidden md:flex items-center space-x-6 text-sm font-medium">
-              <Link href="/dashboard" className="transition-colors hover:text-accent">{t('dashboard')}</Link>
-              <Link href="/events" className="transition-colors hover:text-accent">{t('events')}</Link>
+          
+          {user && !isStaff && (
+            <div className="hidden md:flex items-center space-x-6 text-sm font-medium border-l pl-8 border-border">
+              <Link href="/dashboard" className="transition-colors hover:text-accent font-semibold">{t('dashboard')}</Link>
+              <Link href="/events" className="transition-colors hover:text-accent font-semibold">{t('events')}</Link>
             </div>
           )}
         </div>
 
         <div className="flex items-center space-x-4">
           <LanguageToggle />
-          {!isStaff && (
+          {!isStaff && user && (
             <Button variant="ghost" size="icon" className="md:hidden">
               <Menu className="h-5 w-5" />
             </Button>
           )}
           
           <div className="hidden md:flex items-center space-x-4">
-            {!loading && user ? (
+            {!userLoading && user ? (
               <>
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20">
                   <User className="h-4 w-4 text-accent" />
                   <span className="text-xs font-semibold">
-                    {isStaff ? "Staff Account" : user.email?.split('@')[0]}
+                    {isStaff ? "Staff Account" : (userProfile?.firstName || user.email?.split('@')[0])}
                   </span>
                 </div>
-                <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground">
+                <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-destructive">
                   <LogOut className="h-4 w-4 mr-2" />
                   {t('logout')}
                 </Button>
               </>
             ) : (
-              <>
-                <Link href="/login">
-                  <Button variant="ghost" size="sm" className="font-semibold text-primary">
-                    {t('login')}
-                  </Button>
-                </Link>
-                <Link href="/register">
-                  <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                    {t('register')}
-                  </Button>
-                </Link>
-              </>
+              !userLoading && (
+                <>
+                  <Link href="/login">
+                    <Button variant="ghost" size="sm" className="font-semibold text-primary">
+                      {t('login')}
+                    </Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                      {t('register')}
+                    </Button>
+                  </Link>
+                </>
+              )
             )}
           </div>
         </div>
