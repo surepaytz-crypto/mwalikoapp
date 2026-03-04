@@ -15,17 +15,24 @@
     "Event": {
       "title": "Event",
       "type": "object",
-      "description": "Represents a premium event with 3-point scanning logic (Gate, Drinks, Food).",
+      "description": "Represents a premium event with 3-point scanning logic and dynamic categories.",
       "properties": {
         "id": { "type": "string" },
         "nameEn": { "type": "string" },
         "nameSw": { "type": "string" },
         "startDate": { "type": "string", "format": "date-time" },
         "guestCapacity": { "type": "number" },
-        "vipGuests": { "type": "number" },
-        "standardGuests": { "type": "number" },
+        "categories": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "List of guest categories defined for this event (e.g., VIP, VVIP, Standard, Press, Staff)."
+        },
         "eventAdminId": { "type": "string" },
-        "isActive": { "type": "boolean" }
+        "isActive": { "type": "boolean" },
+        "stats": {
+          "type": "object",
+          "description": "Aggregated scan statistics per category and checkpoint."
+        }
       },
       "required": ["id", "nameEn", "eventAdminId", "isActive"]
     },
@@ -37,7 +44,8 @@
         "id": { "type": "string" },
         "guestId": { "type": "string" },
         "eventId": { "type": "string" },
-        "category": { "type": "string", "enum": ["VIP", "Standard"] },
+        "guestName": { "type": "string" },
+        "category": { "type": "string" },
         "scannedGate": { "type": "boolean" },
         "scannedDrinks": { "type": "boolean" },
         "scannedFood": { "type": "boolean" },

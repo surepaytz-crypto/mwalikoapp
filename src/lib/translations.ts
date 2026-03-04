@@ -40,6 +40,15 @@ export const translations = {
     checkpointFood: "Food",
     categoryVIP: "VIP",
     categoryStandard: "Standard",
+    smsInvite: "SMS Invitation",
+    whatsappInvite: "WhatsApp Invitation",
+    manageCategories: "Manage Categories",
+    addCategory: "Add Category",
+    categoryName: "Category Name",
+    shareWhatsApp: "Share on WhatsApp",
+    shareSMS: "Share via SMS",
+    serviceTitle: "Omnichannel Invitations",
+    serviceDescription: "Reach your guests where they are. We offer professional SMS and WhatsApp invitations integrated with unique QR access codes.",
   },
   sw: {
     appName: "Mwaliko App",
@@ -81,6 +90,15 @@ export const translations = {
     checkpointFood: "Chakula",
     categoryVIP: "VIP",
     categoryStandard: "Kawaida",
+    smsInvite: "Mwaliko wa SMS",
+    whatsappInvite: "Mwaliko wa WhatsApp",
+    manageCategories: "Dhibiti Makundi",
+    addCategory: "Ongeza Kundi",
+    categoryName: "Jina la Kundi",
+    shareWhatsApp: "Shiriki WhatsApp",
+    shareSMS: "Shiriki SMS",
+    serviceTitle: "Mialiko ya Njia Zote",
+    serviceDescription: "Wafikie wageni wako popote walipo. Tunatoa mialiko ya kitaalamu ya SMS na WhatsApp iliyounganishwa na namba maalum za siri za QR.",
   }
 };
 

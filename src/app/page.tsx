@@ -2,10 +2,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Navbar } from "@/components/Navbar";
 import { useTranslation } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, QrCode, ShieldCheck, GlassWater, Utensils, DoorOpen } from "lucide-react";
+import { Calendar, Users, QrCode, ShieldCheck, GlassWater, Utensils, DoorOpen, MessageSquare, Send } from "lucide-react";
 
 export default function Home() {
   const { t } = useTranslation();
@@ -29,7 +30,7 @@ export default function Home() {
           </video>
           
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="container px-4 text-center text-white">
+            <div className="container px-4 text-center text-white z-10">
               <h1 className="mb-6 font-headline text-5xl font-bold tracking-tight md:text-7xl">
                 {t('tagline')}
               </h1>
@@ -47,6 +48,51 @@ export default function Home() {
                     {t('login')}
                   </Button>
                 </Link>
+              </div>
+            </div>
+          </div>
+          
+          {/* Illustration Overlay */}
+          <div className="absolute bottom-0 right-0 p-8 hidden lg:block opacity-40 hover:opacity-100 transition-opacity">
+            <Image 
+              src="https://picsum.photos/seed/event-illust/600/400" 
+              alt="Event Illustration" 
+              width={400} 
+              height={260} 
+              className="rounded-2xl border-4 border-accent shadow-2xl"
+              data-ai-hint="event illustration"
+            />
+          </div>
+        </section>
+
+        {/* Omnichannel Invitations Section */}
+        <section className="py-24 bg-card border-y">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col md:flex-row items-center gap-12">
+              <div className="flex-1 space-y-6">
+                <h2 className="font-headline text-4xl font-bold text-primary">{t('serviceTitle')}</h2>
+                <p className="text-lg text-muted-foreground leading-relaxed">
+                  {t('serviceDescription')}
+                </p>
+                <div className="flex gap-4">
+                  <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-bold text-sm">
+                    <MessageSquare className="h-4 w-4" /> WhatsApp
+                  </div>
+                  <div className="flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full font-bold text-sm">
+                    <Send className="h-4 w-4" /> SMS
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className="relative p-8 bg-background rounded-3xl border-2 border-accent shadow-xl rotate-2">
+                   <div className="space-y-4">
+                     <div className="bg-muted p-3 rounded-lg w-2/3 ml-auto text-xs">Hello Honorable Guest! You are cordially invited to the Luxury Gala Night. Your entry QR code is attached.</div>
+                     <div className="bg-accent/20 p-4 rounded-xl text-center">
+                        <QrCode className="h-20 w-20 mx-auto text-accent mb-2" />
+                        <p className="text-[10px] font-bold uppercase tracking-widest">SECURE ACCESS</p>
+                     </div>
+                   </div>
+                </div>
               </div>
             </div>
           </div>
