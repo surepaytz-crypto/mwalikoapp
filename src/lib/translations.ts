@@ -65,6 +65,12 @@ export const translations = {
     staffPassword: "Staff Password",
     assignedCheckpoint: "Assigned Point",
     createDemo: "Generate Demo Event",
+    downloadReport: "Download Report",
+    attended: "Attended",
+    absent: "Absent",
+    invited: "Invited",
+    totalReport: "Registry Status Report",
+    poweredBy: "Powered by 360 Digital",
   },
   sw: {
     appName: "Mwaliko App",
@@ -131,6 +137,12 @@ export const translations = {
     staffPassword: "Nywila ya Mtumishi",
     assignedCheckpoint: "Kituo cha Kazi",
     createDemo: "Anzisha Harusi ya Pima na Jenifa",
+    downloadReport: "Pakua Ripoti",
+    attended: "Alikuja",
+    absent: "Hakuja",
+    invited: "Alialikwa",
+    totalReport: "Ripoti ya Hali ya Usajili",
+    poweredBy: "Imewezeshwa na 360 Digital",
   }
 };
 
