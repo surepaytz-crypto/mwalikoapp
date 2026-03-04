@@ -1,3 +1,4 @@
+
 export const translations = {
   en: {
     appName: "Mwaliko App",
@@ -64,7 +65,6 @@ export const translations = {
     staffUsername: "Staff Username",
     staffPassword: "Staff Password",
     assignedCheckpoint: "Assigned Point",
-    createDemo: "Generate Demo Event",
     downloadReport: "Download Report",
     downloadRegistry: "Download CSV",
     attended: "Attended",
@@ -149,7 +149,6 @@ export const translations = {
     staffUsername: "Jina la Mtumishi",
     staffPassword: "Nywila ya Mtumishi",
     assignedCheckpoint: "Kituo cha Kazi",
-    createDemo: "Anzisha Harusi ya Pima na Jenifa",
     downloadReport: "Pakua Ripoti",
     downloadRegistry: "Pakua CSV",
     attended: "Alikuja",

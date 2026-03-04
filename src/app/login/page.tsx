@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Sparkles, LogIn, Shield, UserCircle, Eye, EyeOff } from "lucide-react";
+import { Loader2, Sparkles, LogIn, Shield, Eye, EyeOff } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -140,20 +140,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleDemoAdmin = async () => {
-    setLoading(true);
-    const demoEmail = "demo@mwaliko.com";
-    const demoPassword = "password123";
-    try {
-      const cred = await signInWithEmailAndPassword(auth, demoEmail, demoPassword);
-      router.push("/dashboard");
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Demo Failed", description: "Access error" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -177,7 +163,7 @@ export default function LoginPage() {
                 <form onSubmit={handleAdminLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="admin@mwaliko.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    <Input id="email" type="email" placeholder="admin@mwalikoapp.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
@@ -258,24 +244,6 @@ export default function LoginPage() {
           <CardFooter className="flex flex-col space-y-4">
             <div className="text-sm text-center text-muted-foreground">
               New Admin? <Link href="/register" className="text-accent font-bold hover:underline">Create an account</Link>
-            </div>
-            <div className="relative w-full">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Demo Accounts</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 w-full">
-              <Button variant="secondary" className="bg-accent/10 text-accent hover:bg-accent/20" onClick={handleDemoAdmin} disabled={loading}>
-                <Sparkles className="h-4 w-4 mr-2" />
-                Demo Admin
-              </Button>
-              <Button variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20" onClick={() => router.push("/login")} disabled={loading}>
-                <UserCircle className="h-4 w-4 mr-2" />
-                Demo Staff
-              </Button>
             </div>
           </CardFooter>
         </Card>

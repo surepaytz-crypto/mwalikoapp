@@ -4,7 +4,7 @@
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Users, Calendar, QrCode, Loader2, Plus, GlassWater, Utensils, DoorOpen, UserPlus, Shield, FileSpreadsheet, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check, Info, ArrowRight, ShieldCheck, Mail, AlertTriangle } from "lucide-react";
+import { Users, Calendar, QrCode, Loader2, Plus, GlassWater, Utensils, DoorOpen, UserPlus, Shield, FileSpreadsheet, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check, Info, ArrowRight, ShieldCheck, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc } from "@/firebase";
@@ -293,9 +293,9 @@ export default function Dashboard() {
       statsUpdate.invitedTotals = newInvitedTotals;
       batch.update(doc(db, "events", eventId), statsUpdate);
       await batch.commit();
-      toast({ title: "Simulation Complete", description: "Guest data populated." });
+      toast({ title: "Success", description: "Sample guest data populated successfully." });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Simulation Error", description: e.message });
+      toast({ variant: "destructive", title: "Operation Error", description: e.message });
     } finally {
       setIsUploading(false);
     }
@@ -644,12 +644,12 @@ export default function Dashboard() {
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>{t('uploadCsv')}</DialogTitle>
-                          <DialogDescription>{t('importFormat')}</DialogDescription>
+                          <DialogTitle>Import Sample Guests</DialogTitle>
+                          <DialogDescription>Quickly populate your registry with test data to verify scanning logic.</DialogDescription>
                         </DialogHeader>
                         <div className="grid grid-cols-2 gap-4">
-                           <Button variant="outline" onClick={() => handleCsvSimulation(activeEvent.id, "new")} disabled={isUploading}>{isUploading ? <Loader2 className="animate-spin" /> : "Simulate New Registry"}</Button>
-                           <Button className="bg-accent text-accent-foreground" onClick={() => handleCsvSimulation(activeEvent.id, "finished")} disabled={isUploading}>{isUploading ? <Loader2 className="animate-spin" /> : "Simulate Post-Event"}</Button>
+                           <Button variant="outline" onClick={() => handleCsvSimulation(activeEvent.id, "new")} disabled={isUploading}>{isUploading ? <Loader2 className="animate-spin" /> : "Load New Samples"}</Button>
+                           <Button className="bg-accent text-accent-foreground" onClick={() => handleCsvSimulation(activeEvent.id, "finished")} disabled={isUploading}>{isUploading ? <Loader2 className="animate-spin" /> : "Load Scanned Samples"}</Button>
                         </div>
                       </DialogContent>
                     </Dialog>
