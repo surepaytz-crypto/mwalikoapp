@@ -4,11 +4,11 @@
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check, Info } from "lucide-react";
+import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check, Info, ArrowRight, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc } from "@/firebase";
-import { collection, query, where, addDoc, doc, updateDoc, arrayUnion, writeBatch, deleteDoc, getDocs, setDoc } from "firebase/firestore";
+import { collection, query, where, addDoc, doc, updateDoc, arrayUnion, writeBatch, deleteDoc, getDocs, setDoc, serverTimestamp } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Progress } from "@/components/ui/progress";
@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 
 type PackageType = "Free" | "Premium";
+type CreationStage = "plans" | "payment" | "details";
 
 interface PlanConfig {
   type: PackageType;
@@ -48,12 +49,13 @@ export default function Dashboard() {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [reportGuests, setReportGuests] = useState<any[]>([]);
   
-  // Create Event Form State
-  const [eventName, setEventName] = useState("");
+  // Creation Wizard State
+  const [creationStage, setCreationStage] = useState<CreationStage>("plans");
   const [selectedPlan, setSelectedPlan] = useState<PackageType>("Free");
-  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
-  const [pendingEventId, setPendingEventId] = useState<string | null>(null);
+  const [eventName, setEventName] = useState("");
+  const [isFinalizing, setIsFinalizing] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Edit Event Form State
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -67,7 +69,7 @@ export default function Dashboard() {
   const [staffCheckpoint, setStaffCheckpoint] = useState<"GATE" | "DRINKS" | "FOOD">("GATE");
   const [selectedEventForStaff, setSelectedEventForStaff] = useState<string>("");
 
-  // Role detection
+  // Role & Subscription detection
   const userDocRef = useMemoFirebase(() => {
     if (!db || !user) return null;
     return doc(db, "users", user.uid);
@@ -80,6 +82,9 @@ export default function Dashboard() {
   }, [db, user, userProfile]);
   
   const { data: events, isLoading: eventsLoading } = useCollection(eventsQuery);
+
+  const hasActivePremium = userProfile?.subscription?.type === "Premium" && 
+    new Date(userProfile.subscription.expiryDate) > new Date();
 
   useEffect(() => {
     if (events && events.length > 0 && !activeEventId) {
@@ -99,10 +104,17 @@ export default function Dashboard() {
     return Math.random().toString(36).substring(2, 7).toUpperCase();
   };
 
-  const handleCreateEvent = async () => {
-    if (!db || !user || !eventName) return;
+  const resetWizard = () => {
+    if (hasActivePremium) {
+      setCreationStage("details");
+      setSelectedPlan("Premium");
+    } else {
+      setCreationStage("plans");
+    }
+    setEventName("");
+  };
 
-    // Check if user has EVER used a free trial
+  const handlePlanSelection = () => {
     const hasUsedFreeTrial = events?.some(e => e.packageType === "Free");
     if (selectedPlan === "Free" && hasUsedFreeTrial) {
       toast({
@@ -113,10 +125,45 @@ export default function Dashboard() {
       return;
     }
 
-    setIsCreatingEvent(true);
-    const plan = PLANS.find(p => p.type === selectedPlan)!;
+    if (selectedPlan === "Premium") {
+      setCreationStage("payment");
+    } else {
+      setCreationStage("details");
+    }
+  };
+
+  const handlePayment = async () => {
+    if (!db || !user) return;
+    setIsProcessingPayment(true);
     try {
+      // Simulate real payment delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const expiry = new Date();
+      expiry.setMonth(expiry.getMonth() + 2);
+
+      await updateDoc(doc(db, "users", user.uid), {
+        subscription: {
+          type: "Premium",
+          expiryDate: expiry.toISOString(),
+          paidAt: new Date().toISOString()
+        }
+      });
+      
+      setCreationStage("details");
+      toast({ title: "Payment Verified", description: "You now have 2 months of unlimited Premium access!" });
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  const handleFinalizeEvent = async () => {
+    if (!db || !user || !eventName) return;
+    setIsFinalizing(true);
+    try {
+      const plan = PLANS.find(p => p.type === selectedPlan)!;
       const shortId = generateShortId();
+      
       const newEvent = {
         shortId,
         nameEn: eventName,
@@ -126,44 +173,20 @@ export default function Dashboard() {
         guestLimit: plan.limit,
         packageType: plan.type,
         categories: [], 
-        isActive: selectedPlan === "Free", 
-        isPaid: selectedPlan === "Free",
+        isActive: true, 
+        isPaid: true,
         eventAdminId: user.uid,
         stats: {},
         invitedTotals: {},
-        expiryDate: selectedPlan === "Free" 
-          ? new Date(Date.now() + 86400000 * 30).toISOString() 
-          : new Date(Date.now() + 86400000 * 60).toISOString() // 2 Months for Premium
+        createdAt: new Date().toISOString()
       };
-      const docRef = await addDoc(collection(db, "events"), newEvent);
       
-      if (selectedPlan === "Premium") {
-        setPendingEventId(docRef.id);
-        setShowPayment(true);
-      } else {
-        setActiveEventId(docRef.id);
-        toast({ title: "Event Created", description: "Your free trial registry is now active!" });
-      }
-      setEventName("");
+      const docRef = await addDoc(collection(db, "events"), newEvent);
+      setActiveEventId(docRef.id);
+      setIsModalOpen(false);
+      toast({ title: "Event Created", description: `${eventName} registry is now live!` });
     } finally {
-      setIsCreatingEvent(false);
-    }
-  };
-
-  const handleCompletePayment = async () => {
-    if (!db || !pendingEventId) return;
-    setIsUpdatingEvent(true);
-    try {
-      await updateDoc(doc(db, "events", pendingEventId), {
-        isPaid: true,
-        isActive: true
-      });
-      setActiveEventId(pendingEventId);
-      setShowPayment(false);
-      setPendingEventId(null);
-      toast({ title: "Payment Successful", description: "Your premium registry is now active for 2 months!" });
-    } finally {
-      setIsUpdatingEvent(false);
+      setIsFinalizing(false);
     }
   };
 
@@ -177,7 +200,7 @@ export default function Dashboard() {
         posterUrl: editPosterUrl
       });
       setIsEditDialogOpen(false);
-      toast({ title: "Event Updated", description: "Changes have been saved successfully." });
+      toast({ title: "Event Updated", description: "Changes saved successfully." });
     } finally {
       setIsUpdatingEvent(false);
     }
@@ -188,7 +211,7 @@ export default function Dashboard() {
     try {
       await deleteDoc(doc(db, "events", activeEventId));
       setActiveEventId(null);
-      toast({ title: "Event Deleted", description: "The event has been removed." });
+      toast({ title: "Event Deleted", description: "The registry has been removed." });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Delete Failed", description: e.message });
     }
@@ -203,7 +226,6 @@ export default function Dashboard() {
   const handleCsvSimulation = async (eventId: string, mode: "new" | "finished" = "new") => {
     if (!db || !activeEvent) return;
     
-    // Check Limits
     const currentCount = Object.values(activeEvent.invitedTotals || {}).reduce((a: number, b: any) => a + (b || 0), 0) as number;
     const limit = activeEvent.guestLimit || 200;
     
@@ -244,12 +266,6 @@ export default function Dashboard() {
         const scanDrinks = mode === "finished" ? isScanned && Math.random() > 0.3 : false;
         const scanFood = mode === "finished" ? isScanned && Math.random() > 0.4 : false;
 
-        if (isScanned) {
-          categoryScans[item.category].gate++;
-          if (scanDrinks) categoryScans[item.category].drinks++;
-          if (scanFood) categoryScans[item.category].food++;
-        }
-
         const guestRef = doc(collection(db, "events", eventId, "guestEvents"));
         batch.set(guestRef, {
           guestName: item.name,
@@ -273,7 +289,6 @@ export default function Dashboard() {
       
       categories.forEach(cat => {
         newInvitedTotals[cat] = (newInvitedTotals[cat] || 0) + (categoryScans[cat]?.total || 0);
-        
         const existingStats = activeEvent.stats?.[cat] || { gate: 0, drinks: 0, food: 0 };
         statsUpdate[`stats.${cat}.gate`] = (existingStats.gate || 0) + (categoryScans[cat]?.gate || 0);
         statsUpdate[`stats.${cat}.drinks`] = (existingStats.drinks || 0) + (categoryScans[cat]?.drinks || 0);
@@ -281,16 +296,12 @@ export default function Dashboard() {
       });
       
       statsUpdate.invitedTotals = newInvitedTotals;
-
       batch.update(doc(db, "events", eventId), statsUpdate);
       await batch.commit();
       
-      toast({ 
-        title: mode === "finished" ? "Post-Event Simulation" : "Import Successful", 
-        description: `${mockData.length} guests processed.` 
-      });
+      toast({ title: "Simulation Complete", description: "Guest data populated." });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Simulation Failed", description: e.message });
+      toast({ variant: "destructive", title: "Simulation Error", description: e.message });
     } finally {
       setIsUploading(false);
     }
@@ -315,10 +326,7 @@ export default function Dashboard() {
   };
 
   const handleAddStaff = () => {
-    if (!db || !selectedEventForStaff || !staffUsername || !staffPassword) {
-      toast({ variant: "destructive", title: "Error", description: "Missing fields" });
-      return;
-    }
+    if (!db || !selectedEventForStaff || !staffUsername || !staffPassword) return;
     const event = events?.find(e => e.id === selectedEventForStaff);
     addDoc(collection(db, "events", selectedEventForStaff, "staffAssignments"), {
       username: staffUsername,
@@ -330,7 +338,7 @@ export default function Dashboard() {
     });
     setStaffUsername("");
     setStaffPassword("");
-    toast({ title: "Staff Assigned", description: `${staffUsername} assigned successfully.` });
+    toast({ title: "Staff Assigned", description: `${staffUsername} added.` });
   };
 
   if (isUserLoading || eventsLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
@@ -353,93 +361,131 @@ export default function Dashboard() {
               <p className="text-muted-foreground">Premium Event Registry &bull; {user.email}</p>
             </div>
             <div className="flex gap-2">
-              <Dialog>
+              <Dialog open={isModalOpen} onOpenChange={(open) => {
+                setIsModalOpen(open);
+                if (open) resetWizard();
+              }}>
                 <DialogTrigger asChild>
                   <Button className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-xl">
                     <Plus className="mr-2 h-4 w-4" /> {t('createEvent')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[600px]">
-                  {showPayment ? (
-                    <div className="space-y-6 py-4 text-center">
-                      <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                         <CreditCard className="h-8 w-8 text-green-600" />
-                      </div>
+                  {creationStage === "plans" && (
+                    <div className="space-y-6 py-4">
                       <DialogHeader>
-                        <DialogTitle>Secure Payment Gateway</DialogTitle>
-                        <DialogDescription>
-                          Complete your purchase for the <strong>{selectedPlan}</strong> plan ({PLANS.find(p => p.type === selectedPlan)?.price}).
-                        </DialogDescription>
+                        <DialogTitle>Step 1: Select Your Registry Plan</DialogTitle>
+                        <DialogDescription>Choose a package to unlock your event registry features.</DialogDescription>
                       </DialogHeader>
-                      <div className="bg-muted/50 p-6 rounded-xl border space-y-4">
-                        <div className="flex justify-between font-bold">
-                           <span>Total Due</span>
-                           <span className="text-accent">{PLANS.find(p => p.type === selectedPlan)?.price}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground italic">Activation for 2 months with unlimited cards.</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {PLANS.map((plan) => {
+                          const isFreeUsed = events?.some(e => e.packageType === "Free");
+                          const isDisabled = plan.type === "Free" && (isFreeUsed || hasActivePremium);
+
+                          return (
+                            <button
+                              key={plan.type}
+                              disabled={isDisabled}
+                              onClick={() => setSelectedPlan(plan.type)}
+                              className={cn(
+                                "p-6 rounded-2xl border-2 text-left transition-all relative group",
+                                selectedPlan === plan.type ? "border-accent bg-accent/5 ring-2 ring-accent/20" : "border-muted hover:border-accent/50",
+                                isDisabled && "opacity-50 cursor-not-allowed bg-muted grayscale"
+                              )}
+                            >
+                              <div className="flex justify-between items-start mb-4">
+                                <div className="p-3 bg-white rounded-xl shadow-sm border border-muted group-hover:border-accent/30">
+                                  {plan.type === "Free" ? <Sparkles className="h-6 w-6 text-accent" /> : <ShieldCheck className="h-6 w-6 text-accent" />}
+                                </div>
+                                {selectedPlan === plan.type && <Check className="h-5 w-5 text-accent" />}
+                              </div>
+                              <h3 className="font-bold text-lg mb-1">{plan.name}</h3>
+                              <p className="text-xs text-muted-foreground mb-4">{plan.duration} Coverage</p>
+                              <div className="space-y-2 mb-6">
+                                <div className="flex items-center gap-2 text-[11px] font-medium">
+                                  <Check className="h-3 w-3 text-green-500" /> {plan.limit === 999999 ? "Unlimited" : plan.limit} Guest Cards
+                                </div>
+                                <div className="flex items-center gap-2 text-[11px] font-medium">
+                                  <Check className="h-3 w-3 text-green-500" /> AI Invitation Designer
+                                </div>
+                                <div className="flex items-center gap-2 text-[11px] font-medium">
+                                  <Check className="h-3 w-3 text-green-500" /> 3-Point Security Scan
+                                </div>
+                              </div>
+                              <div className="text-2xl font-black text-primary">{plan.price}</div>
+                              {isDisabled && (
+                                <span className="absolute top-2 right-2 bg-destructive text-white text-[9px] font-bold px-2 py-0.5 rounded-full">NOT ELIGIBLE</span>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
-                      <Button className="w-full h-12 bg-primary" onClick={handleCompletePayment} disabled={isUpdatingEvent}>
-                        {isUpdatingEvent ? <Loader2 className="animate-spin" /> : t('payAndActivate')}
+                      <Button onClick={handlePlanSelection} className="w-full h-12">
+                        Continue to {selectedPlan === "Premium" ? "Payment" : "Details"} <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </div>
-                  ) : (
-                    <>
-                      <DialogHeader>
-                        <DialogTitle>{t('createEvent')}</DialogTitle>
-                        <DialogDescription>Setup your new premium registry and choose a plan.</DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-6 py-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="name">{t('eventName')}</Label>
-                          <Input id="name" value={eventName} onChange={(e) => setEventName(e.target.value)} placeholder="e.g. Wedding of Pima & Jenifa" />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label>{t('package')}</Label>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {PLANS.map((plan) => {
-                               const isFreeUsed = events?.some(e => e.packageType === "Free");
-                               const isDisabled = plan.type === "Free" && isFreeUsed;
+                  )}
 
-                               return (
-                                <button
-                                  key={plan.type}
-                                  disabled={isDisabled}
-                                  onClick={() => setSelectedPlan(plan.type)}
-                                  className={cn(
-                                    "p-4 rounded-xl border-2 text-left transition-all relative",
-                                    selectedPlan === plan.type ? "border-accent bg-accent/5 ring-2 ring-accent/20" : "border-muted hover:border-accent/50",
-                                    isDisabled && "opacity-50 cursor-not-allowed bg-muted grayscale"
-                                  )}
-                                >
-                                  <div className="flex justify-between items-start mb-2">
-                                     <p className="font-bold text-sm">{plan.name}</p>
-                                     {selectedPlan === plan.type && <Check className="h-4 w-4 text-accent" />}
-                                  </div>
-                                  <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">
-                                    {plan.limit === 999999 ? "Unlimited Cards" : `${plan.limit} Cards`}
-                                  </p>
-                                  <p className="text-[10px] text-muted-foreground mb-2">{plan.duration}</p>
-                                  <p className="text-xs font-bold text-accent">{plan.price}</p>
-                                  {isDisabled && (
-                                    <span className="absolute inset-0 flex items-center justify-center bg-black/5 rounded-xl">
-                                       <span className="bg-destructive text-white text-[8px] font-bold px-2 py-0.5 rounded-full rotate-[-10deg]">USED</span>
-                                    </span>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          <p className="text-[10px] text-muted-foreground mt-2 italic flex items-center gap-1">
-                             <Sparkles className="h-3 w-3" /> {t('includesWhatsapp')}
-                          </p>
+                  {creationStage === "payment" && (
+                    <div className="space-y-6 py-4 text-center">
+                      <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                         <CreditCard className="h-10 w-10 text-green-600" />
+                      </div>
+                      <DialogHeader>
+                        <DialogTitle>Verify Payment Access</DialogTitle>
+                        <DialogDescription>
+                          Complete activation for your <strong>Premium Package</strong> (350,000 TZS).
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="bg-muted/50 p-6 rounded-2xl border text-left space-y-4">
+                        <div className="flex justify-between items-center pb-2 border-b">
+                           <span className="text-sm font-medium">Total Due</span>
+                           <span className="text-xl font-bold text-accent">350,000 TZS</span>
+                        </div>
+                        <div className="space-y-2">
+                           <Label className="text-xs opacity-60">Payment Reference</Label>
+                           <div className="p-3 bg-white rounded-lg border font-mono text-xs text-center tracking-widest">MW-{Math.random().toString(36).substring(7).toUpperCase()}</div>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground italic text-center">Once verified, you will have unlimited registry access for 2 months.</p>
+                      </div>
+                      <div className="flex gap-3">
+                         <Button variant="outline" className="flex-1" onClick={() => setCreationStage("plans")}>Go Back</Button>
+                         <Button className="flex-[2] h-12 bg-primary" onClick={handlePayment} disabled={isProcessingPayment}>
+                            {isProcessingPayment ? <Loader2 className="animate-spin" /> : "Verify & Activate Premium"}
+                         </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {creationStage === "details" && (
+                    <div className="space-y-6 py-4">
+                      <DialogHeader>
+                        <DialogTitle>Step 2: Event Identity</DialogTitle>
+                        <DialogDescription>Enter the official name for your new registry.</DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="ename">Event Registry Name</Label>
+                          <Input 
+                            id="ename" 
+                            value={eventName} 
+                            onChange={(e) => setEventName(e.target.value)} 
+                            placeholder="e.g. The Royal Wedding of Pima & Jenifa"
+                            className="h-12 text-lg"
+                          />
+                        </div>
+                        <div className="p-4 bg-accent/5 rounded-xl border border-accent/20 flex gap-4 items-start">
+                           <Info className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+                           <p className="text-xs leading-relaxed text-muted-foreground">This name will appear on all digital invitations and security scan reports. You can translate this into Swahili later in settings.</p>
                         </div>
                       </div>
-                      <DialogFooter>
-                        <Button onClick={handleCreateEvent} disabled={isCreatingEvent || !eventName} className="w-full">
-                          {isCreatingEvent ? <Loader2 className="animate-spin" /> : (selectedPlan === "Free" ? "Start Free Trial" : "Continue to Payment")}
+                      <div className="flex gap-3">
+                        <Button variant="outline" className="flex-1" onClick={() => hasActivePremium ? setIsModalOpen(false) : setCreationStage("plans")}>Cancel</Button>
+                        <Button onClick={handleFinalizeEvent} disabled={isFinalizing || !eventName} className="flex-[2] h-12 bg-accent text-accent-foreground">
+                          {isFinalizing ? <Loader2 className="animate-spin" /> : "Finalize Registry Creation"}
                         </Button>
-                      </DialogFooter>
-                    </>
+                      </div>
+                    </div>
                   )}
                 </DialogContent>
               </Dialog>
@@ -450,7 +496,7 @@ export default function Dashboard() {
             <StatStat icon={<Calendar className="h-5 w-5" />} title={t('events')} value={events?.length.toString() || "0"} label="Total Created" />
             <StatStat icon={<Sparkles className="h-5 w-5" />} title="AI Rendered" value={currentGuestCount.toString()} label="Invitations Ready" />
             <StatStat icon={<Users className="h-5 w-5" />} title="Total Capacity" value={events?.reduce((acc, e) => acc + (e.guestLimit || 0), 0).toString() || "0"} label="Registered Scale" />
-            <StatStat icon={<Shield className="h-5 w-5" />} title="Security" value="3-Point" label="Gate/Drinks/Food" />
+            <StatStat icon={<ShieldCheck className="h-5 w-5" />} title="Security Status" value={hasActivePremium ? "PREMIUM" : "STANDARD"} label={hasActivePremium ? "Unlimited Access" : "Trial Active"} />
           </div>
 
           {events && events.length > 0 && (
@@ -476,15 +522,7 @@ export default function Dashboard() {
                     </span>
                     {activeEventId === e.id && (
                       <div className="flex items-center gap-1 border-l border-white/20 pl-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7 rounded-full hover:bg-white/20 text-white p-0"
-                          onClick={(ev) => {
-                            ev.stopPropagation();
-                            openEditDialog(e);
-                          }}
-                        >
+                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-white/20 text-white p-0" onClick={(ev) => { ev.stopPropagation(); openEditDialog(e); }}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         <AlertDialog>
@@ -531,13 +569,6 @@ export default function Dashboard() {
                           <p className="text-sm font-bold text-accent">{activeEvent.packageType === "Premium" ? "Unlimited" : `${Math.round((currentGuestCount / guestLimit) * 100)}%`}</p>
                        </div>
                        <Progress value={activeEvent.packageType === "Premium" ? 0 : (currentGuestCount / guestLimit) * 100} className="h-3" />
-                       <div className="flex items-center gap-2 mt-2">
-                          <Info className="h-3 w-3 text-accent" />
-                          <p className="text-[10px] text-muted-foreground italic">
-                            Your registry is on the <strong>{activeEvent.packageType}</strong> package. 
-                            {activeEvent.packageType === "Free" ? " Expires in 1 month." : " Expires in 2 months."}
-                          </p>
-                       </div>
                     </CardContent>
                  </Card>
                  <Card className="border-none shadow-sm bg-primary text-primary-foreground">
@@ -642,7 +673,7 @@ export default function Dashboard() {
                         </div>
                         <div className="space-y-2">
                           <Label>{t('staffUsername')}</Label>
-                          <Input value={staffUsername} onChange={(e) => setStaffUsername(e.target.value)} placeholder="e.g. juma_gate" />
+                          <Input value={staffUsername} onChange={(e) => setStaffUsername(setStaffUsername)} placeholder="e.g. juma_gate" />
                         </div>
                         <div className="space-y-2">
                           <Label>{t('staffPassword')}</Label>
@@ -695,7 +726,6 @@ export default function Dashboard() {
               </Tabs>
             </div>
 
-            {/* HIGH-END PRINT REPORT SECTION */}
             <div className="hidden print:block font-sans p-8">
               <div className="flex justify-between items-start mb-12 border-b-2 border-primary pb-8">
                 <div>
@@ -713,22 +743,6 @@ export default function Dashboard() {
                 <PrintStatCard title={t('checkpointGate')} event={activeEvent} checkpoint="gate" t={t} />
                 <PrintStatCard title={t('checkpointDrinks')} event={activeEvent} checkpoint="drinks" t={t} />
                 <PrintStatCard title={t('checkpointFood')} event={activeEvent} checkpoint="food" t={t} />
-              </div>
-
-              <div className="mb-12">
-                <h2 className="text-xl font-bold border-l-4 border-accent pl-4 mb-6 uppercase tracking-tight">Category Breakdown</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  {activeEvent.categories?.map((cat: string) => (
-                    <div key={cat} className="p-4 bg-muted/20 border rounded-lg flex justify-between items-center">
-                      <span className="font-bold uppercase text-xs">{cat}</span>
-                      <div className="flex gap-4 text-xs font-mono">
-                         <div className="text-center"><p className="opacity-50">Gate</p><p className="font-bold">{activeEvent.stats?.[cat]?.gate || 0}/{activeEvent.invitedTotals?.[cat] || 0}</p></div>
-                         <div className="text-center"><p className="opacity-50">Drinks</p><p className="font-bold">{activeEvent.stats?.[cat]?.drinks || 0}/{activeEvent.invitedTotals?.[cat] || 0}</p></div>
-                         <div className="text-center"><p className="opacity-50">Food</p><p className="font-bold">{activeEvent.stats?.[cat]?.food || 0}/{activeEvent.invitedTotals?.[cat] || 0}</p></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
 
               <div>
@@ -764,11 +778,6 @@ export default function Dashboard() {
                    </tbody>
                 </table>
               </div>
-
-              <footer className="mt-20 pt-8 border-t text-center space-y-2">
-                 <p className="text-sm font-headline font-bold text-primary italic">Asante kwa kuchagua Mwaliko App.</p>
-                 <p className="text-[10px] uppercase tracking-[0.5em] text-muted-foreground font-bold">{t('poweredBy')}</p>
-              </footer>
             </div>
           </div>
         )}
