@@ -34,7 +34,12 @@ export const translations = {
     noEvents: "No events found. Start by creating one.",
     luxuryDescription: "Premium security and invitations for distinguished events.",
     qrScanner: "QR Verification",
-    verifyGuest: "Thibitisha Mgeni",
+    verifyGuest: "Verify Guest",
+    checkpointGate: "Gate",
+    checkpointDrinks: "Drinks",
+    checkpointFood: "Food",
+    categoryVIP: "VIP",
+    categoryStandard: "Standard",
   },
   sw: {
     appName: "Mwaliko App",
@@ -71,6 +76,11 @@ export const translations = {
     luxuryDescription: "Ulinzi na mialiko ya kiwango cha juu kwa matukio maalum.",
     qrScanner: "Uhaki wa QR",
     verifyGuest: "Thibitisha Mgeni",
+    checkpointGate: "Lango",
+    checkpointDrinks: "Vinywaji",
+    checkpointFood: "Chakula",
+    categoryVIP: "VIP",
+    categoryStandard: "Kawaida",
   }
 };
 
