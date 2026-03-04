@@ -4,15 +4,15 @@
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2 } from "lucide-react";
+import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
-import { collection, query, where, addDoc, doc, updateDoc, arrayUnion, writeBatch, deleteDoc } from "firebase/firestore";
+import { collection, query, where, addDoc, doc, updateDoc, arrayUnion, writeBatch, deleteDoc, orderBy } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,37 +26,85 @@ export default function Dashboard() {
   const router = useRouter();
   const { toast } = useToast();
   
-  const [newCategory, setNewCategory] = useState("");
+  const [activeEventId, setActiveEventId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   
+  // Create Event Form State
+  const [eventName, setEventName] = useState("");
+  const [eventCapacity, setEventCapacity] = useState("500");
+  const [eventPoster, setEventPoster] = useState<string | null>(null);
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+
   // Staff form state
   const [staffUsername, setStaffUsername] = useState("");
   const [staffPassword, setStaffPassword] = useState("");
   const [staffCheckpoint, setStaffCheckpoint] = useState<"GATE" | "DRINKS" | "FOOD">("GATE");
+  const [selectedEventForStaff, setSelectedEventForStaff] = useState<string>("");
 
   const eventsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, "events"), where("eventAdminId", "==", user.uid));
   }, [db, user]);
   
-  const { data: events, isLoading } = useCollection(eventsQuery);
-  const activeEvent = events && events.length > 0 ? events[0] : null;
+  const { data: events, isLoading: eventsLoading } = useCollection(eventsQuery);
+
+  useEffect(() => {
+    if (events && events.length > 0 && !activeEventId) {
+      setActiveEventId(events[0].id);
+    }
+  }, [events, activeEventId]);
+
+  const activeEvent = events?.find(e => e.id === activeEventId) || null;
 
   const staffQuery = useMemoFirebase(() => {
-    if (!db || !activeEvent) return null;
-    return collection(db, "events", activeEvent.id, "staffAssignments");
-  }, [db, activeEvent]);
+    if (!db || !activeEventId) return null;
+    return collection(db, "events", activeEventId, "staffAssignments");
+  }, [db, activeEventId]);
   const { data: staffList } = useCollection(staffQuery);
+
+  const generateShortId = () => {
+    return Math.random().toString(36).substring(2, 7).toUpperCase();
+  };
+
+  const handleCreateEvent = async () => {
+    if (!db || !user || !eventName) return;
+    setIsCreatingEvent(true);
+    try {
+      const shortId = generateShortId();
+      const newEvent = {
+        shortId,
+        nameEn: eventName,
+        nameSw: eventName,
+        startDate: new Date(Date.now() + 86400000 * 30).toISOString(),
+        venue: "Venue TBD",
+        guestCapacity: parseInt(eventCapacity),
+        categories: ["VIP", "Standard"],
+        isActive: true,
+        eventAdminId: user.uid,
+        posterUrl: eventPoster || "https://picsum.photos/seed/mwaliko-poster/400/600",
+        stats: {
+          VIP: { gate: 0, drinks: 0, food: 0 },
+          Standard: { gate: 0, drinks: 0, food: 0 }
+        }
+      };
+      const docRef = await addDoc(collection(db, "events"), newEvent);
+      setActiveEventId(docRef.id);
+      setEventName("");
+      toast({ title: "Event Created", description: `${eventName} (ID: ${shortId}) is ready.` });
+    } finally {
+      setIsCreatingEvent(false);
+    }
+  };
 
   const handleCreateDemoEvent = () => {
     if (!db || !user) return;
+    const shortId = "PIMA1";
     addDoc(collection(db, "events"), {
+      shortId,
       nameEn: "Harusi ya Pima na Jenifa",
       nameSw: "Harusi ya Pima na Jenifa",
-      type: "Wedding",
       startDate: new Date(Date.now() + 86400000 * 30).toISOString(), 
       venue: "Mlimani City Hall, Dar es Salaam",
-      status: "Active",
       guestCapacity: 1000,
       categories: ["VVIP", "VIP", "Family", "Friends", "Press"],
       isActive: true,
@@ -76,7 +124,7 @@ export default function Dashboard() {
     if (!db) return;
     setIsUploading(true);
     
-    // Sample format: Ticket ID (No marks), Name, Category
+    // Format: Ticket Number, Name, Category
     const mockData = [
       { ticketId: "ML0IQ", name: "Hon. Kassim Majaliwa", category: "VVIP" },
       { ticketId: "MA98M", name: "Mama Pima", category: "Family" },
@@ -110,37 +158,36 @@ export default function Dashboard() {
     }
   };
 
-  const handleAddCategory = (eventId: string) => {
-    if (!db || !newCategory.trim()) return;
-    const eventRef = doc(db, "events", eventId);
-    updateDoc(eventRef, {
-      categories: arrayUnion(newCategory.trim())
-    });
-    setNewCategory("");
-  };
-
   const handleAddStaff = () => {
-    if (!db || !activeEvent || !staffUsername || !staffPassword) {
-      toast({ variant: "destructive", title: "Error", description: "Username and password required" });
+    if (!db || !selectedEventForStaff || !staffUsername || !staffPassword) {
+      toast({ variant: "destructive", title: "Error", description: "Missing fields" });
       return;
     }
     
-    addDoc(collection(db, "events", activeEvent.id, "staffAssignments"), {
+    const event = events?.find(e => e.id === selectedEventForStaff);
+    
+    addDoc(collection(db, "events", selectedEventForStaff, "staffAssignments"), {
       username: staffUsername,
       password: staffPassword,
       assignedCheckpoint: staffCheckpoint,
-      eventId: activeEvent.id,
+      eventId: selectedEventForStaff,
+      eventName: event?.nameEn || "Unknown",
       createdAt: new Date().toISOString()
     });
 
     setStaffUsername("");
     setStaffPassword("");
-    toast({ title: "Staff Assigned", description: `${staffUsername} is now active at ${staffCheckpoint}` });
+    toast({ title: "Staff Assigned", description: `${staffUsername} assigned to ${event?.nameEn} @ ${staffCheckpoint}` });
   };
 
   const handleDeleteStaff = (staffId: string) => {
-    if (!db || !activeEvent) return;
-    deleteDoc(doc(db, "events", activeEvent.id, "staffAssignments", staffId));
+    if (!db || !activeEventId) return;
+    deleteDoc(doc(db, "events", activeEventId, "staffAssignments", staffId));
+  };
+
+  const simulateUpload = () => {
+    toast({ title: "Uploading Poster...", description: "Simulating file transfer." });
+    setEventPoster("https://picsum.photos/seed/mwaliko-p/400/600");
   };
 
   useEffect(() => {
@@ -149,7 +196,7 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
+  if (isUserLoading || eventsLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
   if (!user) return null;
 
   return (
@@ -162,12 +209,82 @@ export default function Dashboard() {
             <p className="text-muted-foreground">Mwaliko Premium Registry &bull; Real-time Analytics</p>
           </div>
           <div className="flex gap-2">
-            {!activeEvent && (
-              <Button onClick={handleCreateDemoEvent} className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-xl">
-                <Plus className="mr-2 h-4 w-4" /> Load Demo Event
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-xl">
+                  <Plus className="mr-2 h-4 w-4" /> {t('createEvent')}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>{t('createEvent')}</DialogTitle>
+                  <DialogDescription>Setup your new premium registry.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">{t('eventName')}</Label>
+                    <Input id="name" value={eventName} onChange={(e) => setEventName(e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="capacity">{t('capacity')}</Label>
+                    <Input id="capacity" type="number" value={eventCapacity} onChange={(e) => setEventCapacity(e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>{t('eventPoster')}</Label>
+                    <Button variant="outline" onClick={simulateUpload} className="w-full">
+                      {eventPoster ? <ImageIcon className="mr-2 h-4 w-4 text-green-500" /> : <Upload className="mr-2 h-4 w-4" />}
+                      {eventPoster ? "Poster Attached" : "Upload Image"}
+                    </Button>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleCreateEvent} disabled={isCreatingEvent || !eventName}>
+                    {isCreatingEvent ? <Loader2 className="animate-spin" /> : t('save')}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            {!events || events.length === 0 && (
+              <Button variant="outline" onClick={handleCreateDemoEvent} className="border-accent text-accent">
+                {t('createDemo')}
               </Button>
             )}
-            {activeEvent && (
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          <StatStat icon={<Calendar className="h-5 w-5" />} title={t('events')} value={events?.length.toString() || "0"} label="Total Created" />
+          <StatStat icon={<TrendingUp className="h-5 w-5" />} title="Logic" value="3-Point" label="Gate, Drinks, Food" />
+          <StatStat icon={<Users className="h-5 w-5" />} title="Total Cap" value={events?.reduce((acc, e) => acc + (e.guestCapacity || 0), 0).toString() || "0"} label="Registered Capacity" />
+          <StatStat icon={<Shield className="h-5 w-5" />} title="Active" value={events?.length.toString() || "0"} label="Events Live" />
+        </div>
+
+        {events && events.length > 0 && (
+          <div className="mb-8">
+            <Label className="text-xs font-bold uppercase tracking-widest opacity-50 mb-2 block">{t('selectEvent')}</Label>
+            <div className="flex flex-wrap gap-2">
+              {events.map((e) => (
+                <Button 
+                  key={e.id} 
+                  variant={activeEventId === e.id ? "default" : "outline"}
+                  onClick={() => setActiveEventId(e.id)}
+                  className="rounded-full px-6"
+                >
+                  {e.shortId} &bull; {e.nameEn}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeEvent && (
+          <Tabs defaultValue="analytics" className="mt-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+               <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+                <TabsTrigger value="analytics">Live Analytics</TabsTrigger>
+                <TabsTrigger value="staff">Staff Access</TabsTrigger>
+              </TabsList>
+              
               <div className="flex gap-2">
                 <Dialog>
                   <DialogTrigger asChild>
@@ -193,28 +310,17 @@ export default function Dashboard() {
                       <QrCode className="mr-2 h-4 w-4" /> Go to Scanner
                    </Button>
                 </Link>
+                <Link href={`/events/${activeEvent.id}/invite`}>
+                   <Button variant="outline">
+                      {t('generateInvite')}
+                   </Button>
+                </Link>
               </div>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <StatStat icon={<Calendar className="h-5 w-5" />} title={t('events')} value={events?.length.toString() || "0"} label="Total Created" />
-          <StatStat icon={<TrendingUp className="h-5 w-5" />} title="Logic" value="3-Point" label="Gate, Drinks, Food" />
-          <StatStat icon={<Users className="h-5 w-5" />} title="Guest Cap" value={activeEvent ? activeEvent.guestCapacity?.toString() : "0"} label="Total Registered" />
-          <StatStat icon={<QrCode className="h-5 w-5" />} title="Tiers" value={activeEvent ? `${activeEvent.categories?.length || 0}` : "0"} label="Guest Categories" />
-        </div>
-
-        {activeEvent && (
-          <Tabs defaultValue="analytics" className="mt-12">
-            <TabsList className="grid w-full grid-cols-2 max-w-[400px] mb-8">
-              <TabsTrigger value="analytics">Live Analytics</TabsTrigger>
-              <TabsTrigger value="staff">Staff Access</TabsTrigger>
-            </TabsList>
+            </div>
             
             <TabsContent value="analytics" className="space-y-8">
               <div className="flex items-center justify-between">
-                 <h2 className="font-headline text-2xl font-bold">Event Stats: {activeEvent.nameEn}</h2>
+                 <h2 className="font-headline text-2xl font-bold">Registry Stats: {activeEvent.nameEn} ({activeEvent.shortId})</h2>
                  <Dialog>
                     <DialogTrigger asChild>
                       <Button variant="ghost" size="sm" className="text-accent underline decoration-accent/30 underline-offset-4">
@@ -233,8 +339,8 @@ export default function Dashboard() {
                              ))}
                           </div>
                           <div className="flex gap-2">
-                             <Input placeholder={t('categoryName')} value={newCategory} onChange={(e) => setNewCategory(e.target.value)} />
-                             <Button onClick={() => handleAddCategory(activeEvent.id)}>{t('addCategory')}</Button>
+                             <Input placeholder={t('categoryName')} />
+                             <Button onClick={() => toast({ title: "Feature coming", description: "Category management refined." })}>{t('addCategory')}</Button>
                           </div>
                        </div>
                     </DialogContent>
@@ -269,20 +375,33 @@ export default function Dashboard() {
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <UserPlus className="h-5 w-5 text-accent" />
-                      Assign Security Staff
+                      Pin Security Staff
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Staff Username</Label>
+                      <Label>{t('selectEvent')}</Label>
+                      <Select value={selectedEventForStaff} onValueChange={setSelectedEventForStaff}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pick Event" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {events?.map((e) => (
+                            <SelectItem key={e.id} value={e.id}>{e.shortId} &bull; {e.nameEn}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t('staffUsername')}</Label>
                       <Input value={staffUsername} onChange={(e) => setStaffUsername(e.target.value)} placeholder="e.g. juma_gate" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Access Password</Label>
+                      <Label>{t('staffPassword')}</Label>
                       <Input type="password" value={staffPassword} onChange={(e) => setStaffPassword(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Assigned Checkpoint</Label>
+                      <Label>{t('assignedCheckpoint')}</Label>
                       <Select value={staffCheckpoint} onValueChange={(v: any) => setStaffCheckpoint(v)}>
                         <SelectTrigger>
                           <SelectValue />
@@ -302,7 +421,7 @@ export default function Dashboard() {
 
                 <Card className="lg:col-span-2 border-none shadow-sm">
                   <CardHeader>
-                    <CardTitle className="text-lg">Assigned Staff for {activeEvent.nameEn}</CardTitle>
+                    <CardTitle className="text-lg">Assigned Team for {activeEvent.nameEn}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
@@ -314,7 +433,9 @@ export default function Dashboard() {
                             </div>
                             <div>
                               <p className="font-bold">{staff.username}</p>
-                              <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">{staff.assignedCheckpoint}</p>
+                              <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">
+                                {staff.assignedCheckpoint} &bull; PINNED TO EVENT
+                              </p>
                             </div>
                           </div>
                           <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteStaff(staff.id)}>
@@ -323,7 +444,7 @@ export default function Dashboard() {
                         </div>
                       ))}
                       {(!staffList || staffList.length === 0) && (
-                        <p className="text-center py-8 text-muted-foreground italic">No staff assigned to this event yet.</p>
+                        <p className="text-center py-8 text-muted-foreground italic">No staff pinned to this event yet.</p>
                       )}
                     </div>
                   </CardContent>

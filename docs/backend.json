@@ -18,10 +18,12 @@
       "description": "Represents a premium event with 3-point scanning logic.",
       "properties": {
         "id": { "type": "string" },
+        "shortId": { "type": "string", "description": "Short human-readable ID" },
         "nameEn": { "type": "string" },
         "nameSw": { "type": "string" },
         "startDate": { "type": "string", "format": "date-time" },
         "guestCapacity": { "type": "number" },
+        "posterUrl": { "type": "string" },
         "categories": { 
           "type": "array", 
           "items": { "type": "string" }
@@ -33,7 +35,7 @@
           "description": "Aggregated scan statistics."
         }
       },
-      "required": ["id", "nameEn", "eventAdminId", "isActive"]
+      "required": ["id", "shortId", "nameEn", "eventAdminId", "isActive"]
     },
     "GuestEvent": {
       "title": "GuestEvent",
@@ -61,7 +63,8 @@
         "username": { "type": "string" },
         "password": { "type": "string" },
         "assignedCheckpoint": { "type": "string", "enum": ["GATE", "DRINKS", "FOOD"] },
-        "eventId": { "type": "string" }
+        "eventId": { "type": "string" },
+        "eventName": { "type": "string" }
       },
       "required": ["username", "password", "assignedCheckpoint", "eventId"]
     }

@@ -58,6 +58,13 @@ export const translations = {
     uploadCsv: "Upload CSV",
     processing: "Processing...",
     importFormat: "Format: Ticket Number, Name, Category",
+    eventPoster: "Event Poster",
+    shortId: "Short ID",
+    selectEvent: "Select Event",
+    staffUsername: "Staff Username",
+    staffPassword: "Staff Password",
+    assignedCheckpoint: "Assigned Point",
+    createDemo: "Generate Demo Event",
   },
   sw: {
     appName: "Mwaliko App",
@@ -117,6 +124,13 @@ export const translations = {
     uploadCsv: "Pakia CSV",
     processing: "Inasindika...",
     importFormat: "Mfumo: Namba ya Tiketi, Jina, Kundi",
+    eventPoster: "Bango la Tukio",
+    shortId: "ID Fupi",
+    selectEvent: "Chagua Tukio",
+    staffUsername: "Jina la Mtumishi",
+    staffPassword: "Nywila ya Mtumishi",
+    assignedCheckpoint: "Kituo cha Kazi",
+    createDemo: "Anzisha Harusi ya Pima na Jenifa",
   }
 };
 
