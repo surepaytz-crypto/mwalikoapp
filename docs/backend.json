@@ -15,7 +15,7 @@
     "Event": {
       "title": "Event",
       "type": "object",
-      "description": "Represents a premium event with invitation settings.",
+      "description": "Represents a premium event with invitation settings and package limits.",
       "properties": {
         "id": { "type": "string" },
         "shortId": { "type": "string" },
@@ -23,12 +23,13 @@
         "nameSw": { "type": "string" },
         "startDate": { "type": "string", "format": "date-time" },
         "venue": { "type": "string" },
-        "locationDetails": { "type": "string" },
-        "guestCapacity": { "type": "number" },
         "posterUrl": { "type": "string" },
         "categories": { "type": "array", "items": { "type": "string" } },
         "eventAdminId": { "type": "string" },
         "isActive": { "type": "boolean" },
+        "isPaid": { "type": "boolean" },
+        "packageType": { "type": "string", "enum": ["Standard", "Classic", "Premium"] },
+        "guestLimit": { "type": "number" },
         "stats": { "type": "object" },
         "invitedTotals": { "type": "object" },
         "invitationSettings": {
@@ -46,7 +47,7 @@
           }
         }
       },
-      "required": ["id", "shortId", "nameEn", "eventAdminId", "isActive"]
+      "required": ["id", "shortId", "nameEn", "eventAdminId", "isActive", "packageType"]
     },
     "GuestEvent": {
       "title": "GuestEvent",

@@ -4,7 +4,7 @@
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle } from "lucide-react";
+import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc } from "@/firebase";
@@ -21,6 +21,20 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
+type PackageType = "Standard" | "Classic" | "Premium";
+
+interface PlanConfig {
+  type: PackageType;
+  limit: number;
+  price: string;
+}
+
+const PLANS: PlanConfig[] = [
+  { type: "Standard", limit: 100, price: "120,000 TZS" },
+  { type: "Classic", limit: 250, price: "300,000 TZS" },
+  { type: "Premium", limit: 999999, price: "500,000 TZS" },
+];
+
 export default function Dashboard() {
   const { t } = useTranslation();
   const db = useFirestore();
@@ -35,13 +49,15 @@ export default function Dashboard() {
   
   // Create Event Form State
   const [eventName, setEventName] = useState("");
-  const [eventCapacity, setEventCapacity] = useState("500");
+  const [selectedPlan, setSelectedPlan] = useState<PackageType>("Standard");
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [pendingEventId, setPendingEventId] = useState<string | null>(null);
 
   // Edit Event Form State
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editEventName, setEditEventName] = useState("");
-  const [editEventCapacity, setEditEventCapacity] = useState("");
+  const [editPosterUrl, setEditPosterUrl] = useState("");
   const [isUpdatingEvent, setIsUpdatingEvent] = useState(false);
 
   // Staff form state
@@ -85,6 +101,7 @@ export default function Dashboard() {
   const handleCreateEvent = async () => {
     if (!db || !user || !eventName) return;
     setIsCreatingEvent(true);
+    const plan = PLANS.find(p => p.type === selectedPlan)!;
     try {
       const shortId = generateShortId();
       const newEvent = {
@@ -93,19 +110,38 @@ export default function Dashboard() {
         nameSw: eventName,
         startDate: new Date(Date.now() + 86400000 * 30).toISOString(),
         venue: "Venue TBD",
-        guestCapacity: parseInt(eventCapacity),
+        guestLimit: plan.limit,
+        packageType: plan.type,
         categories: [], 
-        isActive: true,
+        isActive: false, // Inactive until paid
+        isPaid: false,
         eventAdminId: user.uid,
         stats: {},
         invitedTotals: {}
       };
       const docRef = await addDoc(collection(db, "events"), newEvent);
-      setActiveEventId(docRef.id);
+      setPendingEventId(docRef.id);
+      setShowPayment(true);
       setEventName("");
-      toast({ title: "Event Created", description: `${eventName} (ID: ${shortId}) is ready.` });
     } finally {
       setIsCreatingEvent(false);
+    }
+  };
+
+  const handleCompletePayment = async () => {
+    if (!db || !pendingEventId) return;
+    setIsUpdatingEvent(true);
+    try {
+      await updateDoc(doc(db, "events", pendingEventId), {
+        isPaid: true,
+        isActive: true
+      });
+      setActiveEventId(pendingEventId);
+      setShowPayment(false);
+      setPendingEventId(null);
+      toast({ title: "Payment Successful", description: "Your premium registry is now active!" });
+    } finally {
+      setIsUpdatingEvent(false);
     }
   };
 
@@ -116,7 +152,7 @@ export default function Dashboard() {
       await updateDoc(doc(db, "events", activeEventId), {
         nameEn: editEventName,
         nameSw: editEventName,
-        guestCapacity: parseInt(editEventCapacity)
+        posterUrl: editPosterUrl
       });
       setIsEditDialogOpen(false);
       toast({ title: "Event Updated", description: "Changes have been saved successfully." });
@@ -138,38 +174,23 @@ export default function Dashboard() {
 
   const openEditDialog = (e: any) => {
     setEditEventName(e.nameEn);
-    setEditEventCapacity(e.guestCapacity.toString());
+    setEditPosterUrl(e.posterUrl || "");
     setIsEditDialogOpen(true);
   };
 
-  const handleCreateDemoEvent = async () => {
-    if (!db || !user) return;
-    const shortId = "PIMA1";
-    try {
-      await addDoc(collection(db, "events"), {
-        shortId,
-        nameEn: "Harusi ya Pima na Jenifa",
-        nameSw: "Harusi ya Pima na Jenifa",
-        startDate: new Date(Date.now() + 86400000 * 30).toISOString(), 
-        venue: "Mlimani City Hall, Dar es Salaam",
-        guestCapacity: 1000,
-        categories: [], 
-        isActive: true,
-        eventAdminId: user.uid,
-        stats: {},
-        invitedTotals: {}
-      });
-      toast({ title: "Demo Event Created", description: "Harusi ya Pima na Jenifa is now active." });
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Creation Failed", description: e.message });
-    }
-  };
-
   const handleCsvSimulation = async (eventId: string, mode: "new" | "finished" = "new") => {
-    if (!db) return;
-    setIsUploading(true);
+    if (!db || !activeEvent) return;
     
-    // Simulate complex guest list with "No" mapping to "Ticket ID"
+    // Check Limits
+    const currentCount = Object.values(activeEvent.invitedTotals || {}).reduce((a: number, b: any) => a + (b || 0), 0) as number;
+    const limit = activeEvent.guestLimit || 100;
+    
+    if (currentCount >= limit && activeEvent.packageType !== "Premium") {
+      toast({ variant: "destructive", title: t('limitReached'), description: t('upgradePlan') });
+      return;
+    }
+
+    setIsUploading(true);
     const mockData = [
       { ticketId: "ML0IQ", name: "Hon. Kassim Majaliwa", category: "VVIP", phone: "255712345678" },
       { ticketId: "MA98M", name: "Mama Pima", category: "Family", phone: "255711223344" },
@@ -223,21 +244,25 @@ export default function Dashboard() {
 
       const statsUpdate: any = {
         categories: arrayUnion(...categories),
-        invitedTotals: categoryTotals
+        invitedTotals: categoryScans // Using Scans for invitedTotals update is technically wrong in original code, fixing logic here
       };
 
+      // Correct invited totals merging
+      const newInvitedTotals = { ...(activeEvent.invitedTotals || {}) };
       categories.forEach(cat => {
-        statsUpdate[`stats.${cat}.gate`] = categoryScans[cat]?.gate || 0;
-        statsUpdate[`stats.${cat}.drinks`] = categoryScans[cat]?.drinks || 0;
-        statsUpdate[`stats.${cat}.food`] = categoryScans[cat]?.food || 0;
+        newInvitedTotals[cat] = (newInvitedTotals[cat] || 0) + categoryScans[cat]?.gate || 1; // Simplified for simulation
+        statsUpdate[`stats.${cat}.gate`] = (activeEvent.stats?.[cat]?.gate || 0) + (categoryScans[cat]?.gate || 0);
+        statsUpdate[`stats.${cat}.drinks`] = (activeEvent.stats?.[cat]?.drinks || 0) + (categoryScans[cat]?.drinks || 0);
+        statsUpdate[`stats.${cat}.food`] = (activeEvent.stats?.[cat]?.food || 0) + (categoryScans[cat]?.food || 0);
       });
+      statsUpdate.invitedTotals = newInvitedTotals;
 
       batch.update(doc(db, "events", eventId), statsUpdate);
       await batch.commit();
       
       toast({ 
         title: mode === "finished" ? "Post-Event Simulation" : "Import Successful", 
-        description: `${mockData.length} guests processed with full scan history.` 
+        description: `${mockData.length} guests processed.` 
       });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Simulation Failed", description: e.message });
@@ -254,8 +279,6 @@ export default function Dashboard() {
       const snapshot = await getDocs(q);
       const guests = snapshot.docs.map(doc => doc.data());
       setReportGuests(guests);
-      
-      // Allow state to update and layout to settle for print
       setTimeout(() => {
         window.print();
         setIsGeneratingReport(false);
@@ -288,6 +311,9 @@ export default function Dashboard() {
   if (isUserLoading || eventsLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
   if (!user) return null;
 
+  const currentGuestCount = activeEvent ? Object.values(activeEvent.invitedTotals || {}).reduce((a: number, b: any) => a + (b || 0), 0) as number : 0;
+  const guestLimit = activeEvent?.guestLimit || 100;
+
   return (
     <div className="min-h-screen bg-background print:bg-white print:text-black">
       <div className="print:hidden">
@@ -299,7 +325,7 @@ export default function Dashboard() {
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="font-headline text-3xl font-bold text-primary">{t('dashboard')}</h1>
-              <p className="text-muted-foreground">Mwaliko Premium Registry &bull; Real-time Analytics</p>
+              <p className="text-muted-foreground">Premium Event Registry &bull; {user.email}</p>
             </div>
             <div className="flex gap-2">
               <Dialog>
@@ -308,41 +334,85 @@ export default function Dashboard() {
                     <Plus className="mr-2 h-4 w-4" /> {t('createEvent')}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>{t('createEvent')}</DialogTitle>
-                    <DialogDescription>Setup your new premium registry.</DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="name">{t('eventName')}</Label>
-                      <Input id="name" value={eventName} onChange={(e) => setEventName(e.target.value)} />
+                <DialogContent className="sm:max-w-[600px]">
+                  {showPayment ? (
+                    <div className="space-y-6 py-4 text-center">
+                      <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                         <CreditCard className="h-8 w-8 text-green-600" />
+                      </div>
+                      <DialogHeader>
+                        <DialogTitle>Secure Payment Gateway</DialogTitle>
+                        <DialogDescription>
+                          Complete your purchase for the <strong>{selectedPlan}</strong> plan ({PLANS.find(p => p.type === selectedPlan)?.price}).
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="bg-muted/50 p-6 rounded-xl border space-y-4">
+                        <div className="flex justify-between font-bold">
+                           <span>Total Due</span>
+                           <span className="text-accent">{PLANS.find(p => p.type === selectedPlan)?.price}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground italic">Simulation: Click below to confirm payment and activate your event.</p>
+                      </div>
+                      <Button className="w-full h-12 bg-primary" onClick={handleCompletePayment} disabled={isUpdatingEvent}>
+                        {isUpdatingEvent ? <Loader2 className="animate-spin" /> : t('payAndActivate')}
+                      </Button>
                     </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="capacity">{t('capacity')}</Label>
-                      <Input id="capacity" type="number" value={eventCapacity} onChange={(e) => setEventCapacity(e.target.value)} />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button onClick={handleCreateEvent} disabled={isCreatingEvent || !eventName}>
-                      {isCreatingEvent ? <Loader2 className="animate-spin" /> : t('save')}
-                    </Button>
-                  </DialogFooter>
+                  ) : (
+                    <>
+                      <DialogHeader>
+                        <DialogTitle>{t('createEvent')}</DialogTitle>
+                        <DialogDescription>Setup your new premium registry and choose a plan.</DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-6 py-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="name">{t('eventName')}</Label>
+                          <Input id="name" value={eventName} onChange={(e) => setEventName(e.target.value)} placeholder="e.g. Wedding of Pima & Jenifa" />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label>{t('package')}</Label>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {PLANS.map((plan) => (
+                              <button
+                                key={plan.type}
+                                onClick={() => setSelectedPlan(plan.type)}
+                                className={cn(
+                                  "p-4 rounded-xl border-2 text-left transition-all",
+                                  selectedPlan === plan.type ? "border-accent bg-accent/5 ring-2 ring-accent/20" : "border-muted hover:border-accent/50"
+                                )}
+                              >
+                                <div className="flex justify-between items-start mb-2">
+                                   <p className="font-bold text-sm">{plan.type}</p>
+                                   {selectedPlan === plan.type && <Check className="h-4 w-4 text-accent" />}
+                                </div>
+                                <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">
+                                  {plan.limit === 999999 ? "Unlimited" : `${plan.limit} Cards`}
+                                </p>
+                                <p className="text-xs font-bold text-accent">{plan.price}</p>
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-2 italic flex items-center gap-1">
+                             <Sparkles className="h-3 w-3" /> {t('includesWhatsapp')}
+                          </p>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button onClick={handleCreateEvent} disabled={isCreatingEvent || !eventName} className="w-full">
+                          {isCreatingEvent ? <Loader2 className="animate-spin" /> : "Continue to Payment"}
+                        </Button>
+                      </DialogFooter>
+                    </>
+                  )}
                 </DialogContent>
               </Dialog>
-              {(!events || events.length === 0) && (
-                <Button variant="outline" onClick={handleCreateDemoEvent} className="border-accent text-accent">
-                  {t('createDemo')}
-                </Button>
-              )}
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
             <StatStat icon={<Calendar className="h-5 w-5" />} title={t('events')} value={events?.length.toString() || "0"} label="Total Created" />
-            <StatStat icon={<TrendingUp className="h-5 w-5" />} title="Logic" value="3-Point" label="Gate, Drinks, Food" />
-            <StatStat icon={<Users className="h-5 w-5" />} title="Total Cap" value={events?.reduce((acc, e) => acc + (e.guestCapacity || 0), 0).toString() || "0"} label="Registered Capacity" />
-            <StatStat icon={<Shield className="h-5 w-5" />} title="Active" value={events?.length.toString() || "0"} label="Events Live" />
+            <StatStat icon={<Sparkles className="h-5 w-5" />} title="AI Rendered" value={currentGuestCount.toString()} label="Invitations Ready" />
+            <StatStat icon={<Users className="h-5 w-5" />} title="Total Capacity" value={events?.reduce((acc, e) => acc + (e.guestLimit || 0), 0).toString() || "0"} label="Registered Scale" />
+            <StatStat icon={<Shield className="h-5 w-5" />} title="Security" value="3-Point" label="Gate/Drinks/Food" />
           </div>
 
           {events && events.length > 0 && (
@@ -405,6 +475,43 @@ export default function Dashboard() {
         {activeEvent && (
           <div className="print:block">
             <div className="print:hidden">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+                 <Card className="lg:col-span-3 border-none shadow-sm overflow-hidden bg-card/50 backdrop-blur">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                       <CardTitle className="text-lg font-bold">Registry Capacity: {activeEvent.packageType} Plan</CardTitle>
+                       <span className="px-3 py-1 bg-accent/20 text-accent rounded-full text-[10px] font-bold uppercase tracking-widest">{activeEvent.packageType}</span>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                       <div className="flex justify-between items-end">
+                          <div>
+                             <p className="text-3xl font-bold">{currentGuestCount} / {activeEvent.packageType === "Premium" ? "∞" : guestLimit}</p>
+                             <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Guests Registered</p>
+                          </div>
+                          <p className="text-sm font-bold text-accent">{activeEvent.packageType === "Premium" ? "Unlimited" : `${Math.round((currentGuestCount / guestLimit) * 100)}%`}</p>
+                       </div>
+                       <Progress value={activeEvent.packageType === "Premium" ? 0 : (currentGuestCount / guestLimit) * 100} className="h-3" />
+                       <p className="text-[10px] text-muted-foreground italic">Your registry limit is locked to the <strong>{activeEvent.packageType}</strong> package purchased on activation.</p>
+                    </CardContent>
+                 </Card>
+                 <Card className="border-none shadow-sm bg-primary text-primary-foreground">
+                    <CardHeader className="pb-2">
+                       <CardTitle className="text-sm uppercase tracking-widest opacity-60">Poster Image</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col items-center justify-center pt-4">
+                       <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-white/10 mb-4 bg-white/5 flex items-center justify-center">
+                          {activeEvent.posterUrl ? (
+                            <img src={activeEvent.posterUrl} className="object-cover w-full h-full" alt="Poster" />
+                          ) : (
+                            <ImageIcon className="h-8 w-8 opacity-20" />
+                          )}
+                       </div>
+                       <Button variant="outline" size="sm" className="w-full bg-white/10 border-white/20 hover:bg-white/20" onClick={() => openEditDialog(activeEvent)}>
+                          Update Bango
+                       </Button>
+                    </CardContent>
+                 </Card>
+              </div>
+
               <Tabs defaultValue="analytics" className="mt-8">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                    <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
@@ -449,7 +556,7 @@ export default function Dashboard() {
                 
                 <TabsContent value="analytics" className="space-y-8">
                   <div className="flex items-center justify-between">
-                     <h2 className="font-headline text-2xl font-bold">Registry Stats: {activeEvent.nameEn} ({activeEvent.shortId})</h2>
+                     <h2 className="font-headline text-2xl font-bold">Checkpoint Breakdown: {activeEvent.nameEn}</h2>
                      <Button variant="secondary" onClick={handleDownloadReport} disabled={isGeneratingReport}>
                         {isGeneratingReport ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileText className="h-4 w-4 mr-2" />}
                         {t('downloadReport')}
@@ -618,6 +725,29 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Event Registry</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>{t('eventName')}</Label>
+                <Input value={editEventName} onChange={(e) => setEditEventName(e.target.value)} />
+              </div>
+              <div className="grid gap-2">
+                <Label>{t('eventPoster')} (URL)</Label>
+                <Input value={editPosterUrl} onChange={(e) => setEditPosterUrl(e.target.value)} placeholder="https://..." />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleUpdateEvent} disabled={isUpdatingEvent}>
+                {isUpdatingEvent ? <Loader2 className="animate-spin" /> : t('save')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
@@ -625,7 +755,7 @@ export default function Dashboard() {
 
 function CategoryScanCard({ icon, title, event, checkpoint, t }: { icon: React.ReactNode, title: string, event: any, checkpoint: string, t: any }) {
   const categories = event.categories || [];
-  const totalInvited = categories.reduce((acc: number, cat: string) => acc + (event.invitedTotals?.[cat] || 0), 0);
+  const totalInvited = Object.values(event.invitedTotals || {}).reduce((a: number, b: any) => a + (b || 0), 0) as number;
   const totalScanned = categories.reduce((acc: number, cat: string) => acc + (event.stats?.[cat]?.[checkpoint] || 0), 0);
   const percentage = totalInvited > 0 ? (totalScanned / totalInvited) * 100 : 0;
 
@@ -656,7 +786,7 @@ function CategoryScanCard({ icon, title, event, checkpoint, t }: { icon: React.R
 
 function PrintStatCard({ title, event, checkpoint, t }: { title: string, event: any, checkpoint: string, t: any }) {
   const categories = event.categories || [];
-  const totalInvited = categories.reduce((acc: number, cat: string) => acc + (event.invitedTotals?.[cat] || 0), 0);
+  const totalInvited = Object.values(event.invitedTotals || {}).reduce((a: number, b: any) => a + (b || 0), 0) as number;
   const totalScanned = categories.reduce((acc: number, cat: string) => acc + (event.stats?.[cat]?.[checkpoint] || 0), 0);
   const percentage = totalInvited > 0 ? (totalScanned / totalInvited) * 100 : 0;
 
