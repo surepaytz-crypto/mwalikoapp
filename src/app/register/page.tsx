@@ -131,7 +131,7 @@ export default function RegisterPage() {
              </div>
             <CardHeader className="text-center pt-10">
               <div className="mx-auto w-24 h-24 bg-accent/10 rounded-full flex items-center justify-center mb-6 border border-accent/20">
-                <Mail className="h-12 w-12 text-accent" />
+                <Mail className="h-12 w-12 text-accent animate-shake" />
               </div>
               <CardTitle className="text-3xl font-headline font-bold text-primary">Check Your Inbox</CardTitle>
               <CardDescription className="text-lg mt-3">

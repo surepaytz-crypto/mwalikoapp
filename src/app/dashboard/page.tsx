@@ -356,7 +356,7 @@ export default function Dashboard() {
              </div>
             <CardHeader className="text-center pb-2">
               <div className="mx-auto w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center mb-6">
-                <Mail className="h-10 w-10 text-accent" />
+                <Mail className="h-10 w-10 text-accent animate-shake" />
               </div>
               <CardTitle className="text-3xl font-headline font-bold text-primary">Activation Required</CardTitle>
               <CardDescription className="text-lg mt-2">
