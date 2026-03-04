@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
+import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc } from "@/firebase";
 import { collection, query, where, addDoc, doc, updateDoc, arrayUnion, writeBatch, deleteDoc, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -51,12 +51,42 @@ export default function Dashboard() {
   const [staffCheckpoint, setStaffCheckpoint] = useState<"GATE" | "DRINKS" | "FOOD">("GATE");
   const [selectedEventForStaff, setSelectedEventForStaff] = useState<string>("");
 
-  const eventsQuery = useMemoFirebase(() => {
+  // Role detection and redirection
+  const userDocRef = useMemoFirebase(() => {
     if (!db || !user) return null;
-    return query(collection(db, "events"), where("eventAdminId", "==", user.uid));
+    return doc(db, "users", user.uid);
   }, [db, user]);
+  const { data: userProfile, isLoading: profileLoading } = useDoc(userDocRef);
+
+  const eventsQuery = useMemoFirebase(() => {
+    if (!db || !user || userProfile?.userRole !== "EventAdmin") return null;
+    return query(collection(db, "events"), where("eventAdminId", "==", user.uid));
+  }, [db, user, userProfile]);
   
   const { data: events, isLoading: eventsLoading } = useCollection(eventsQuery);
+
+  // Handle Staff Redirect: Find assignment and move to scanner
+  useEffect(() => {
+    if (userProfile?.userRole === "ScannerStaff") {
+      const findAssignment = async () => {
+        const staffEmailUsername = user?.email?.split('@')[0];
+        // Note: For large scale, a collectionGroup query would be used here.
+        // For MVP, we'll try to find any event the staff is assigned to.
+        const eventsSnap = await getDocs(collection(db, "events"));
+        for (const eventDoc of eventsSnap.docs) {
+          const staffSnap = await getDocs(query(
+            collection(db, "events", eventDoc.id, "staffAssignments"),
+            where("username", "==", staffEmailUsername)
+          ));
+          if (!staffSnap.empty) {
+            router.push(`/events/${eventDoc.id}/scan`);
+            return;
+          }
+        }
+      };
+      findAssignment();
+    }
+  }, [userProfile, user, db, router]);
 
   useEffect(() => {
     if (events && events.length > 0 && !activeEventId) {
@@ -93,7 +123,7 @@ export default function Dashboard() {
         eventAdminId: user.uid,
         posterUrl: eventPoster || "https://picsum.photos/seed/mwaliko-poster/400/600",
         stats: {},
-        invitedTotals: {} // Track totals per category
+        invitedTotals: {}
       };
       const docRef = await addDoc(collection(db, "events"), newEvent);
       setActiveEventId(docRef.id);
@@ -210,7 +240,7 @@ export default function Dashboard() {
       });
 
       await batch.commit();
-      toast({ title: "Import Successful", description: `${mockData.length} guests imported. Categories detected: ${importedCategories.join(", ")}` });
+      toast({ title: "Import Successful", description: `${mockData.length} guests imported.` });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Import Failed", description: e.message });
     } finally {
@@ -227,7 +257,6 @@ export default function Dashboard() {
       const guests = snapshot.docs.map(doc => doc.data());
       setReportGuests(guests);
       
-      // Delay to ensure rendering before print
       setTimeout(() => {
         window.print();
         setIsGeneratingReport(false);
@@ -254,7 +283,7 @@ export default function Dashboard() {
     });
     setStaffUsername("");
     setStaffPassword("");
-    toast({ title: "Staff Assigned", description: `${staffUsername} assigned to ${event?.nameEn} @ ${staffCheckpoint}` });
+    toast({ title: "Staff Assigned", description: `${staffUsername} assigned successfully.` });
   };
 
   const handleDeleteStaff = (staffId: string) => {
@@ -262,8 +291,11 @@ export default function Dashboard() {
     deleteDoc(doc(db, "events", activeEventId, "staffAssignments", staffId));
   };
 
-  if (isUserLoading || eventsLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
+  if (isUserLoading || eventsLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
   if (!user) return null;
+
+  // If staff, show simple loading while redirect happens
+  if (userProfile?.userRole === "ScannerStaff") return <div className="min-h-screen flex items-center justify-center bg-primary text-white flex-col gap-4"><Loader2 className="h-12 w-12 animate-spin text-accent" /><p>Redirecting to Scanner...</p></div>;
 
   return (
     <div className="min-h-screen bg-background print:bg-white print:text-black">
@@ -528,7 +560,6 @@ export default function Dashboard() {
               </Tabs>
             </div>
 
-            {/* PRINTABLE REPORT VIEW */}
             <div className="hidden print:block font-sans p-8">
               <div className="flex justify-between items-start mb-12 border-b-2 border-primary pb-8">
                 <div>

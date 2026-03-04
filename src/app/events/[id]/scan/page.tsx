@@ -4,14 +4,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
-import { QrCode, ArrowLeft, RefreshCw, CheckCircle2, XCircle, Search, Key, Info, MapPin, Loader2 } from "lucide-react";
+import { QrCode, ArrowLeft, RefreshCw, CheckCircle2, XCircle, Search, Key, Info, MapPin, Loader2, LogOut } from "lucide-react";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
+import { useFirestore, useUser, useDoc, useMemoFirebase, useAuth } from "@/firebase";
 import { collection, query, where, getDocs, doc, updateDoc, increment } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
+import { signOut } from "firebase/auth";
 
 type Checkpoint = "GATE" | "DRINKS" | "FOOD";
 type ScanStatus = "idle" | "scanning" | "valid" | "invalid" | "used";
@@ -20,6 +21,7 @@ export default function ScanPage() {
   const { t } = useTranslation();
   const { id: eventId } = useParams();
   const db = useFirestore();
+  const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   
@@ -29,6 +31,12 @@ export default function ScanPage() {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [scannedGuest, setScannedGuest] = useState<{ name: string, category: string } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, "users", user.uid);
+  }, [db, user]);
+  const { data: userProfile } = useDoc(userDocRef);
 
   const eventRef = useMemoFirebase(() => {
     if (!db || !eventId) return null;
@@ -40,7 +48,7 @@ export default function ScanPage() {
     if (!isUserLoading && !user) {
       router.push("/login");
     }
-  }, [user, isUserLoading]);
+  }, [user, isUserLoading, router]);
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -61,7 +69,6 @@ export default function ScanPage() {
     setScannedGuest(null);
 
     try {
-      // Find guest by ticketId (MW0IQ format)
       const q = query(
         collection(db, "events", eventId as string, "guestEvents"), 
         where("ticketId", "==", ticketId)
@@ -77,20 +84,17 @@ export default function ScanPage() {
       const guestData = guestDoc.data();
       const checkpointField = activeCheckpoint === "GATE" ? "scannedGate" : activeCheckpoint === "DRINKS" ? "scannedDrinks" : "scannedFood";
 
-      // Check if already used at this specific point
       if (guestData[checkpointField]) {
         setStatus("used");
         setScannedGuest({ name: guestData.guestName, category: guestData.category });
         return;
       }
 
-      // Mark as scanned
       await updateDoc(guestDoc.ref, { [checkpointField]: true });
 
-      // Update event stats for this category and point
-      const eventRef = doc(db, "events", eventId as string);
+      const eRef = doc(db, "events", eventId as string);
       const statPath = `stats.${guestData.category}.${activeCheckpoint.toLowerCase()}`;
-      await updateDoc(eventRef, { [statPath]: increment(1) });
+      await updateDoc(eRef, { [statPath]: increment(1) });
 
       setScannedGuest({ name: guestData.guestName, category: guestData.category });
       setStatus("valid");
@@ -105,16 +109,27 @@ export default function ScanPage() {
     }
   };
 
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push("/");
+  };
+
   if (isUserLoading) return <div className="min-h-screen flex items-center justify-center bg-primary"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
 
   return (
     <div className="min-h-screen bg-primary flex flex-col text-primary-foreground">
       <header className="p-4 flex items-center justify-between border-b border-white/10 bg-black/10">
-        <Link href="/dashboard">
-          <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
-            <ArrowLeft className="h-6 w-6" />
+        {userProfile?.userRole === "EventAdmin" ? (
+          <Link href="/dashboard">
+            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+              <ArrowLeft className="h-6 w-6" />
+            </Button>
+          </Link>
+        ) : (
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white hover:bg-white/10">
+            <LogOut className="h-6 w-6" />
           </Button>
-        </Link>
+        )}
         <div className="text-center">
           <h1 className="font-headline text-xl font-bold">Mwaliko Scanner</h1>
           <p className="text-[10px] uppercase tracking-widest opacity-60">{event?.nameEn || "Pima & Jenifa Wedding"}</p>
