@@ -15,24 +15,35 @@
     "Event": {
       "title": "Event",
       "type": "object",
-      "description": "Represents a premium event with 3-point scanning logic.",
+      "description": "Represents a premium event with invitation settings.",
       "properties": {
         "id": { "type": "string" },
-        "shortId": { "type": "string", "description": "Short human-readable ID" },
+        "shortId": { "type": "string" },
         "nameEn": { "type": "string" },
         "nameSw": { "type": "string" },
         "startDate": { "type": "string", "format": "date-time" },
+        "venue": { "type": "string" },
+        "locationDetails": { "type": "string" },
         "guestCapacity": { "type": "number" },
         "posterUrl": { "type": "string" },
-        "categories": { 
-          "type": "array", 
-          "items": { "type": "string" }
-        },
+        "categories": { "type": "array", "items": { "type": "string" } },
         "eventAdminId": { "type": "string" },
         "isActive": { "type": "boolean" },
-        "stats": {
+        "stats": { "type": "object" },
+        "invitedTotals": { "type": "object" },
+        "invitationSettings": {
           "type": "object",
-          "description": "Aggregated scan statistics."
+          "properties": {
+            "templateId": { "type": "string" },
+            "title": { "type": "string" },
+            "hostText": { "type": "string" },
+            "brideName": { "type": "string" },
+            "groomName": { "type": "string" },
+            "rsvpText": { "type": "string" },
+            "dressCode": { "type": "string" },
+            "footerText": { "type": "string" },
+            "showPhoto": { "type": "boolean" }
+          }
         }
       },
       "required": ["id", "shortId", "nameEn", "eventAdminId", "isActive"]
@@ -48,6 +59,7 @@
         "guestName": { "type": "string" },
         "category": { "type": "string" },
         "ticketId": { "type": "string" },
+        "phoneNumber": { "type": "string" },
         "scannedGate": { "type": "boolean" },
         "scannedDrinks": { "type": "boolean" },
         "scannedFood": { "type": "boolean" },

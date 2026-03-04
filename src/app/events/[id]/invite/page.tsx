@@ -8,13 +8,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Download, QrCode, User, MapPin, Printer, MessageSquare, Send, ShieldCheck, Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { QrCode, User, MapPin, Printer, MessageSquare, ShieldCheck, Loader2, Image as ImageIcon, Sparkles, Check, ChevronRight, Save } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useParams } from "next/navigation";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import Image from "next/image";
+
+type TemplateId = "royal-gold" | "modern-minimal" | "garden-floral" | "arch-romantic" | "send-off" | "mchango" | "white-gold" | "soft-blush" | "heritage" | "minimal-formal";
+
+interface TemplateDefinition {
+  id: TemplateId;
+  name: string;
+  hasPhoto: boolean;
+  style: string;
+}
+
+const TEMPLATES: TemplateDefinition[] = [
+  { id: "royal-gold", name: "Royal Gold (Photo)", hasPhoto: true, style: "bg-zinc-900 text-amber-200 border-amber-500/30" },
+  { id: "modern-minimal", name: "Modern Minimal (Photo)", hasPhoto: true, style: "bg-white text-zinc-900 border-zinc-200" },
+  { id: "garden-floral", name: "Garden Floral (Photo)", hasPhoto: true, style: "bg-rose-50 text-rose-900 border-rose-200" },
+  { id: "arch-romantic", name: "Arch Romantic (Photo)", hasPhoto: true, style: "bg-stone-100 text-stone-800 border-stone-200" },
+  { id: "send-off", name: "Send-off Floral", hasPhoto: false, style: "bg-emerald-50 text-emerald-900 border-emerald-200" },
+  { id: "mchango", name: "Mchango Logic", hasPhoto: false, style: "bg-blue-50 text-blue-900 border-blue-200" },
+  { id: "white-gold", name: "White & Gold Modern", hasPhoto: false, style: "bg-white text-zinc-800 border-amber-500" },
+  { id: "soft-blush", name: "Soft Blush Premium", hasPhoto: false, style: "bg-pink-50 text-pink-900 border-pink-200" },
+  { id: "heritage", name: "Heritage Elegant", hasPhoto: false, style: "bg-orange-50 text-orange-950 border-orange-200" },
+  { id: "minimal-formal", name: "Minimal Formal", hasPhoto: false, style: "bg-zinc-50 text-zinc-900 border-zinc-300" },
+];
 
 export default function InvitePage() {
   const { t } = useTranslation();
@@ -22,9 +49,23 @@ export default function InvitePage() {
   const db = useFirestore();
   const { toast } = useToast();
   
+  // Registry State
   const [guestName, setGuestName] = useState("");
   const [category, setCategory] = useState("");
   const [ticketId, setTicketId] = useState(""); 
+  
+  // Invitation Editor State
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>("royal-gold");
+  const [inviteTitle, setInviteTitle] = useState("Official Invitation");
+  const [hostText, setHostText] = useState("Together with their families");
+  const [brideName, setBrideName] = useState("");
+  const [groomName, setGroomName] = useState("");
+  const [rsvpText, setRsvpText] = useState("Kindly RSVP by October 1st");
+  const [dressCode, setDressCode] = useState("Elegant & Formal");
+  const [footerText, setFooterText] = useState("Mwaliko Premium Registry • Verified");
+  const [showPhoto, setShowPhoto] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
   const invitationRef = useRef<HTMLDivElement>(null);
 
   const eventRef = useMemoFirebase(() => {
@@ -35,14 +76,12 @@ export default function InvitePage() {
   const { data: event, isLoading } = useDoc(eventRef);
 
   const generateTicketId = () => {
-    const prefixes = ["ML", "MW", "MA"];
-    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let randomPart = "";
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 5; i++) {
       randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    return `${prefix}${randomPart}`; // No hyphen as requested
+    return randomPart;
   };
 
   useEffect(() => {
@@ -50,26 +89,69 @@ export default function InvitePage() {
   }, []);
 
   useEffect(() => {
-    if (event && event.categories && event.categories.length > 0 && !category) {
-      setCategory(event.categories[0]);
+    if (event) {
+      if (event.categories?.length > 0 && !category) setCategory(event.categories[0]);
+      
+      // Load event-specific invitation settings
+      const settings = event.invitationSettings;
+      if (settings) {
+        if (settings.templateId) setSelectedTemplate(settings.templateId as TemplateId);
+        if (settings.title) setInviteTitle(settings.title);
+        if (settings.hostText) setHostText(settings.hostText);
+        if (settings.brideName) setBrideName(settings.brideName);
+        if (settings.groomName) setGroomName(settings.groomName);
+        if (settings.rsvpText) setRsvpText(settings.rsvpText);
+        if (settings.dressCode) setDressCode(settings.dressCode);
+        if (settings.footerText) setFooterText(settings.footerText);
+        if (settings.showPhoto !== undefined) setShowPhoto(settings.showPhoto);
+      } else {
+        // Defaults from event name
+        const names = event.nameEn?.split("&").map(n => n.trim()) || [];
+        if (names.length >= 2) {
+          setBrideName(names[0]);
+          setGroomName(names[1]);
+        }
+      }
     }
   }, [event]);
+
+  const handleSaveSettings = async () => {
+    if (!db || !id) return;
+    setIsSaving(true);
+    try {
+      await updateDoc(doc(db, "events", id as string), {
+        invitationSettings: {
+          templateId: selectedTemplate,
+          title: inviteTitle,
+          hostText,
+          brideName,
+          groomName,
+          rsvpText,
+          dressCode,
+          footerText,
+          showPhoto
+        }
+      });
+      toast({ title: "Settings Saved", description: "Invitation template and content updated successfully." });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handlePrint = () => {
     window.print();
   };
 
   const handleShareWhatsApp = () => {
-    const text = `Habari ${guestName || "Mgeni Rasmi"}! Unakaribishwa kwa furaha kwenye ${event?.nameEn}. Ukumbi: ${event?.venue}. Tarehe: ${event?.startDate ? new Date(event.startDate).toLocaleDateString() : 'TBD'}. \n\nTafadhali tumia namba yako ya tiketi kwa uhakiki: ${ticketId}\n\nAu fungua picha ya QR hapa kwa kuingia langoni. Karibu sana!`;
+    const text = `Habari ${guestName || "Mgeni Rasmi"}! Unakaribishwa kwa furaha kwenye ${event?.nameEn}. Ukumbi: ${event?.venue}. Tarehe: ${event?.startDate ? new Date(event.startDate).toLocaleDateString() : 'TBD'}. \n\nTafadhali tumia namba yako ya tiketi kwa uhakiki: ${ticketId}\n\nAngalia kadi yako hapa! Karibu sana.`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  const qrData = JSON.stringify({
-    ticketId: ticketId,
-    eventId: id,
-  });
+  const qrData = JSON.stringify({ ticketId, eventId: id });
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
+
+  const currentTemplateDef = TEMPLATES.find(t => t.id === selectedTemplate) || TEMPLATES[0];
 
   return (
     <div className="min-h-screen bg-background print:bg-white">
@@ -78,54 +160,128 @@ export default function InvitePage() {
       </div>
       
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
+          {/* Header Actions */}
           <div className="flex flex-col md:flex-row items-center justify-between mb-8 print:hidden gap-4">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-accent/20 rounded-xl">
-                <QrCode className="h-6 w-6 text-accent" />
+                <Sparkles className="h-6 w-6 text-accent" />
               </div>
               <div>
                 <h1 className="font-headline text-3xl font-bold">Invitation Center</h1>
-                <p className="text-muted-foreground">{event?.nameEn} - Secure Registry</p>
+                <p className="text-muted-foreground">{event?.nameEn} &bull; Live Designer</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Button onClick={handleSaveSettings} disabled={isSaving} className="bg-primary text-primary-foreground">
+                {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Save className="mr-2 h-4 w-4" />} Save Design
+              </Button>
               <Button onClick={handleShareWhatsApp} className="bg-green-600 hover:bg-green-700 text-white">
                 <MessageSquare className="mr-2 h-4 w-4" /> WhatsApp
               </Button>
-              <Button onClick={handlePrint} className="bg-primary text-primary-foreground">
-                <Printer className="mr-2 h-4 w-4" /> Print Invitation
+              <Button onClick={handlePrint} variant="outline">
+                <Printer className="mr-2 h-4 w-4" /> Print
               </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="space-y-6 print:hidden">
-              <Card className="border-none shadow-xl bg-card/50 backdrop-blur">
-                <CardHeader>
-                  <CardTitle>Guest Entry</CardTitle>
-                  <CardDescription>Details for digital and physical registry.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* LEFT PANEL: EDITORS */}
+            <div className="lg:col-span-5 space-y-6 print:hidden">
+              <Tabs defaultValue="template" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="template">Template</TabsTrigger>
+                  <TabsTrigger value="content">Content</TabsTrigger>
+                  <TabsTrigger value="guest">Guest</TabsTrigger>
+                </TabsList>
+
+                {/* TEMPLATE PICKER */}
+                <TabsContent value="template" className="pt-4 space-y-6">
+                  <div className="grid grid-cols-2 gap-3">
+                    {TEMPLATES.map((tmpl) => (
+                      <button
+                        key={tmpl.id}
+                        onClick={() => setSelectedTemplate(tmpl.id)}
+                        className={cn(
+                          "relative p-4 rounded-xl border-2 text-left transition-all hover:shadow-lg",
+                          selectedTemplate === tmpl.id 
+                            ? "border-accent bg-accent/5 ring-2 ring-accent/20" 
+                            : "border-muted bg-card grayscale opacity-70 hover:grayscale-0 hover:opacity-100"
+                        )}
+                      >
+                        <div className={cn("h-2 w-10 rounded-full mb-3", tmpl.style.split(' ')[0])}></div>
+                        <p className="font-bold text-xs uppercase tracking-tight">{tmpl.name}</p>
+                        {selectedTemplate === tmpl.id && (
+                          <div className="absolute top-2 right-2 p-1 bg-accent rounded-full">
+                            <Check className="h-3 w-3 text-white" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {currentTemplateDef.hasPhoto && (
+                    <Card className="border-accent/20 bg-accent/5">
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <ImageIcon className="h-5 w-5 text-accent" />
+                          <div className="text-sm">
+                            <p className="font-bold">Photo Support</p>
+                            <p className="text-xs text-muted-foreground">Toggle event poster visibility</p>
+                          </div>
+                        </div>
+                        <Switch checked={showPhoto} onCheckedChange={setShowPhoto} />
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+
+                {/* CONTENT EDITOR */}
+                <TabsContent value="content" className="pt-4 space-y-4">
                   <div className="space-y-2">
-                    <Label>Guest Name</Label>
-                    <Input 
-                      value={guestName} 
-                      onChange={(e) => setGuestName(e.target.value)} 
-                      placeholder="e.g. Hon. John Doe" 
-                    />
+                    <Label>Invitation Title</Label>
+                    <Input value={inviteTitle} onChange={(e) => setInviteTitle(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Ticket ID</Label>
-                    <div className="flex gap-2">
-                      <Input value={ticketId} readOnly className="bg-muted font-mono" />
-                      <Button variant="outline" onClick={() => setTicketId(generateTicketId())}>
-                        Regen
-                      </Button>
+                    <Label>Host Text</Label>
+                    <Input value={hostText} onChange={(e) => setHostText(e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Bride Name</Label>
+                      <Input value={brideName} onChange={(e) => setBrideName(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Groom Name</Label>
+                      <Input value={groomName} onChange={(e) => setGroomName(e.target.value)} />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Guest Category</Label>
+                    <Label>RSVP Text</Label>
+                    <Input value={rsvpText} onChange={(e) => setRsvpText(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Dress Code / Theme</Label>
+                    <Input value={dressCode} onChange={(e) => setDressCode(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Footer Branding</Label>
+                    <Input value={footerText} onChange={(e) => setFooterText(e.target.value)} />
+                  </div>
+                </TabsContent>
+
+                {/* GUEST DETAILS */}
+                <TabsContent value="guest" className="pt-4 space-y-4">
+                  <div className="space-y-2">
+                    <Label>Live Guest Preview</Label>
+                    <Input 
+                      value={guestName} 
+                      onChange={(e) => setGuestName(e.target.value)} 
+                      placeholder="Type guest name to preview..." 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Category</Label>
                     <Select value={category} onValueChange={setCategory}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select Category" />
@@ -137,76 +293,128 @@ export default function InvitePage() {
                       </SelectContent>
                     </Select>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-accent/5 border-accent/20">
-                 <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                       <ShieldCheck className="h-6 w-6 text-accent shrink-0 mt-1" />
-                       <div>
-                          <p className="font-bold text-sm">3-Point Scan Policy</p>
-                          <p className="text-xs text-muted-foreground">Verification at Gate, Drinks, and Food. No marks on ticket IDs for easy manual entry.</p>
-                       </div>
+                  <div className="space-y-2">
+                    <Label>Ticket ID</Label>
+                    <div className="flex gap-2">
+                      <Input value={ticketId} readOnly className="bg-muted font-mono" />
+                      <Button variant="outline" size="sm" onClick={() => setTicketId(generateTicketId())}>Regen</Button>
                     </div>
-                 </CardContent>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <Card className="border-none bg-muted/30">
+                <CardContent className="p-4 flex items-start gap-4">
+                  <ShieldCheck className="h-5 w-5 text-accent shrink-0 mt-1" />
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    <strong>Secure Registry Binding:</strong> QR codes and Ticket IDs are dynamically generated and linked to your 3-point scanning database. Changes here reflect in real-time.
+                  </p>
+                </CardContent>
               </Card>
             </div>
 
-            <div className="flex justify-center">
+            {/* RIGHT PANEL: LIVE PREVIEW */}
+            <div className="lg:col-span-7 flex justify-center sticky top-24 h-fit">
               <div 
                 ref={invitationRef}
-                className="w-full max-w-md bg-white border shadow-2xl rounded-none p-12 text-center space-y-8 flex flex-col items-center justify-center min-h-[600px] border-black/10"
+                className={cn(
+                  "w-full max-w-[420px] aspect-[9/16] shadow-2xl overflow-hidden relative flex flex-col items-center p-8 text-center",
+                  currentTemplateDef.style
+                )}
               >
-                <div className="space-y-2">
-                  <span className="text-xs font-bold uppercase tracking-[0.3em] text-accent">Official Invitation</span>
-                  <h2 className="font-headline text-4xl font-bold text-primary">{event?.nameEn || "Luxury Event"}</h2>
-                </div>
+                {/* Background Patterns for Heritage/Floral etc */}
+                {selectedTemplate === 'heritage' && (
+                  <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-orange-900 to-transparent"></div>
+                )}
+                {selectedTemplate === 'garden-floral' && (
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-rose-200/40 rounded-full -mr-10 -mt-10 blur-3xl"></div>
+                )}
 
-                <div className="w-full h-px bg-accent/30 mx-auto max-w-[100px]"></div>
-
-                <div className="space-y-4">
-                  <p className="text-sm font-light text-muted-foreground italic">Karibu sana,</p>
-                  <h3 className="text-2xl font-semibold border-b border-black/5 pb-2 inline-block">
-                    {guestName || "Mgeni Rasmi"}
-                  </h3>
-                  <div className="mt-2">
-                     <span className="px-4 py-1 bg-accent/10 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] border border-accent/20">
-                        {category || "CATEGORY"}
-                     </span>
+                <div className="z-10 w-full space-y-6 flex flex-col h-full">
+                  {/* Invitation Header */}
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.4em] opacity-60">{inviteTitle}</span>
+                    <p className="text-xs italic opacity-80">{hostText}</p>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-8 w-full text-sm font-medium">
-                  <div className="flex flex-col items-center gap-1">
-                    <MapPin className="h-4 w-4 text-accent" />
-                    <span>{event?.venue || "Venue TBD"}</span>
+                  {/* Main Event Names */}
+                  <div className="py-4">
+                    <h2 className="font-headline text-5xl font-bold leading-tight">
+                      {brideName || "Bride"} <br/>
+                      <span className="text-2xl font-light italic text-accent">&</span> <br/>
+                      {groomName || "Groom"}
+                    </h2>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <User className="h-4 w-4 text-accent" />
-                    <span>{event?.startDate ? new Date(event.startDate).toLocaleDateString() : "TBD"}</span>
-                  </div>
-                </div>
 
-                <div className="p-4 bg-white border-2 border-primary/10 rounded-xl shadow-lg">
-                  {ticketId && (
-                    <QRCodeSVG 
-                      value={qrData} 
-                      size={200} 
-                      level={"H"}
-                      includeMargin={true}
-                    />
+                  {/* Photo Section */}
+                  {currentTemplateDef.hasPhoto && showPhoto && (
+                    <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-xl border-4 border-white/10 group">
+                      <Image 
+                        src={event?.posterUrl || "https://picsum.photos/seed/wedding/800/450"} 
+                        alt="Event"
+                        fill
+                        className="object-cover"
+                        data-ai-hint="wedding event"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                        <p className="text-white text-[10px] font-bold uppercase">Event Poster View</p>
+                      </div>
+                    </div>
                   )}
-                </div>
 
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">{t('ticketId')}</p>
-                  <p className="text-xl font-mono font-bold text-primary tracking-wider">{ticketId || "GENERATING..."}</p>
-                </div>
+                  <div className="flex-1 flex flex-col justify-center space-y-6">
+                    {/* Guest Section */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-light italic opacity-60">You are cordially invited,</p>
+                      <h3 className="text-2xl font-semibold px-4 border-b border-accent/20 pb-1 inline-block">
+                        {guestName || "Guest Name"}
+                      </h3>
+                      <div className="pt-2">
+                         <span className="px-3 py-1 bg-accent/10 rounded-full text-[9px] font-bold uppercase tracking-widest border border-accent/20">
+                            {category || "STANDARD"}
+                         </span>
+                      </div>
+                    </div>
 
-                <footer className="pt-8 border-t border-black/5 w-full">
-                  <p className="text-[10px] uppercase tracking-widest opacity-50">Mwaliko Premium Registry &bull; Verified</p>
-                </footer>
+                    {/* Venue & Time */}
+                    <div className="grid grid-cols-2 gap-4 text-xs font-medium border-y border-accent/10 py-4">
+                      <div className="flex flex-col items-center gap-1 border-r border-accent/10">
+                        <MapPin className="h-3 w-3 opacity-60" />
+                        <span className="truncate w-full">{event?.venue || "Venue TBD"}</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <User className="h-3 w-3 opacity-60" />
+                        <span>{event?.startDate ? new Date(event.startDate).toLocaleDateString() : "TBD"}</span>
+                      </div>
+                    </div>
+
+                    {/* QR Section */}
+                    <div className="flex justify-center">
+                      <div className="p-3 bg-white rounded-xl shadow-inner border border-zinc-100">
+                        <QRCodeSVG 
+                          value={qrData} 
+                          size={140} 
+                          level={"H"}
+                          includeMargin={false}
+                          fgColor={selectedTemplate === 'royal-gold' ? '#D4AF37' : '#000000'}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ID & Footer */}
+                  <div className="space-y-3 pt-4">
+                    <div className="space-y-1">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-40">Security Access ID</p>
+                      <p className="text-lg font-mono font-bold tracking-[0.2em]">{ticketId}</p>
+                    </div>
+                    
+                    <div className="space-y-1 border-t border-accent/10 pt-4">
+                       <p className="text-[9px] opacity-60">{rsvpText}</p>
+                       <p className="text-[8px] font-bold uppercase tracking-widest opacity-40">{footerText}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -217,8 +425,8 @@ export default function InvitePage() {
         @media print {
           body { background: white !important; }
           .print\\:hidden { display: none !important; }
-          .container { max-width: 100% !important; width: 100% !important; }
-          .max-w-md { box-shadow: none !important; border: none !important; margin: 0 auto !important; }
+          .container { max-width: 100% !important; width: 100% !important; padding: 0 !important; }
+          .max-w-[420px] { box-shadow: none !important; border: 1px solid #eee !important; margin: 0 auto !important; height: 100vh !important; }
         }
       `}</style>
     </div>
