@@ -17,16 +17,17 @@ export function getFirebaseApp(): FirebaseApp | null {
   const isMissingConfig = !firebaseConfig.apiKey || firebaseConfig.apiKey === 'undefined' || firebaseConfig.apiKey === '';
   
   if (isMissingConfig) {
-    if (typeof window !== 'undefined') {
-      // On client, we want to throw so the provider catches it and shows the UI
-      throw new Error("Firebase API key is missing. Please click the 'Link Project' button in the Studio toolbar above to connect your project.");
-    }
-    // On server, return null to avoid crashing initializeApp
+    // We return null instead of throwing to allow the UI to handle the empty state gracefully
     return null;
   }
 
-  if (getApps().length > 0) return getApp();
-  return initializeApp(firebaseConfig);
+  try {
+    if (getApps().length > 0) return getApp();
+    return initializeApp(firebaseConfig);
+  } catch (e) {
+    console.error("Failed to initialize Firebase app:", e);
+    return null;
+  }
 }
 
 export function getFirebaseAuth(): Auth | null {
