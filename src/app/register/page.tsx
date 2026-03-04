@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Sparkles, UserPlus, Mail, ShieldCheck, ScrollText, Signature } from "lucide-react";
+import { Loader2, Sparkles, UserPlus, Mail, ShieldCheck, ScrollText, Eye, EyeOff } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,6 +34,8 @@ export default function RegisterPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isVerificationSent, setIsVerificationSent] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const auth = useAuth();
   const db = useFirestore();
@@ -48,6 +50,10 @@ export default function RegisterPage() {
     e.preventDefault();
     if (!agreedToTerms) {
       toast({ variant: "destructive", title: "Terms & Conditions", description: "You must agree to the Terms and Conditions to continue." });
+      return;
+    }
+    if (formData.password.length < 6) {
+      toast({ variant: "destructive", title: "Weak Password", description: "Password must be at least 6 characters long." });
       return;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -135,7 +141,7 @@ export default function RegisterPage() {
               </div>
               <CardTitle className="text-3xl font-headline font-bold text-primary">Check Your Inbox</CardTitle>
               <CardDescription className="text-lg mt-3">
-                Welcome to the Inner Circle, <strong>{formData.firstName}</strong>.
+                Welcome to the Inner Circle, <strong>{formData.firstName || "Chacha"}</strong>.
               </CardDescription>
             </CardHeader>
             <CardContent className="px-10 pb-6 text-center space-y-6">
@@ -152,7 +158,7 @@ export default function RegisterPage() {
                   </p>
                 </div>
                 <div className="pt-4 border-t border-muted-foreground/10">
-                   <p className="text-xs font-bold text-primary mb-0.5">Kennedy John</p>
+                   <p className="text-xs font-bold text-primary mb-0.5">Chacha Steven</p>
                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Founder, 360 Digital</p>
                 </div>
               </div>
@@ -205,29 +211,39 @@ export default function RegisterPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" placeholder="Pima" value={formData.firstName} onChange={handleChange} required />
+                    <Input id="firstName" placeholder="Chacha" value={formData.firstName} onChange={handleChange} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" placeholder="Mwaliko" value={formData.lastName} onChange={handleChange} required />
+                    <Input id="lastName" placeholder="Steven" value={formData.lastName} onChange={handleChange} required />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
-                  <Input id="email" type="email" placeholder="pima@example.com" value={formData.email} onChange={handleChange} required />
+                  <Input id="email" type="email" placeholder="chachasteven@mwalikoapp.com" value={formData.email} onChange={handleChange} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phoneNumber">Phone Number</Label>
-                  <Input id="phoneNumber" placeholder="255 712 345 678" value={formData.phoneNumber} onChange={handleChange} required />
+                  <Input id="phoneNumber" placeholder="0614 320 858" value={formData.phoneNumber} onChange={handleChange} required />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input id="password" type="password" value={formData.password} onChange={handleChange} required />
+                    <div className="relative">
+                      <Input id="password" type={showPassword ? "text" : "password"} value={formData.password} onChange={handleChange} required className="pr-10" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary">
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input id="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleChange} required />
+                    <div className="relative">
+                      <Input id="confirmPassword" type={showConfirmPassword ? "text" : "password"} value={formData.confirmPassword} onChange={handleChange} required className="pr-10" />
+                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary">
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 

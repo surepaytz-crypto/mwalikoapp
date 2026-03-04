@@ -4,15 +4,15 @@
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check, Info, ArrowRight, ShieldCheck, Mail, Signature } from "lucide-react";
+import { Users, Calendar, QrCode, Loader2, Plus, GlassWater, Utensils, DoorOpen, UserPlus, Shield, FileSpreadsheet, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check, Info, ArrowRight, ShieldCheck, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc } from "@/firebase";
-import { collection, query, where, addDoc, doc, updateDoc, arrayUnion, writeBatch, deleteDoc, getDocs, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, addDoc, doc, updateDoc, arrayUnion, writeBatch, deleteDoc, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -377,7 +377,7 @@ export default function Dashboard() {
                   </p>
                 </div>
                 <div className="pt-4 border-t border-muted text-left">
-                   <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">Kennedy John</p>
+                   <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">Chacha Steven</p>
                    <p className="text-[9px] text-muted-foreground uppercase tracking-tighter">Founder, 360 Digital</p>
                 </div>
               </div>
