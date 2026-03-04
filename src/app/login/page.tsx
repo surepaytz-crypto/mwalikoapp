@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -8,7 +7,7 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,13 +31,13 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const provisionUserRole = async (userUid: string, role: "EventAdmin" | "ScannerStaff") => {
+  const provisionUserRole = async (userUid: string, role: "EventAdmin" | "ScannerStaff", email: string) => {
     if (!db) return;
     await setDoc(doc(db, "users", userUid), {
       id: userUid,
-      email: email || `${staffUsername}@staff.mwaliko.com`,
+      email: email,
       userRole: role,
-      createdAt: new Date().toISOString()
+      updatedAt: new Date().toISOString()
     }, { merge: true });
   };
 
@@ -46,7 +45,11 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const userDoc = await getDoc(doc(db, "users", cred.user.uid));
+      if (!userDoc.exists()) {
+        await provisionUserRole(cred.user.uid, "EventAdmin", email);
+      }
       router.push("/dashboard");
     } catch (error: any) {
       toast({
@@ -64,7 +67,11 @@ export default function LoginPage() {
     setLoading(true);
     const staffEmail = `${staffUsername}@staff.mwaliko.com`;
     try {
-      await signInWithEmailAndPassword(auth, staffEmail, staffPassword);
+      const cred = await signInWithEmailAndPassword(auth, staffEmail, staffPassword);
+      const userDoc = await getDoc(doc(db, "users", cred.user.uid));
+      if (!userDoc.exists()) {
+        await provisionUserRole(cred.user.uid, "ScannerStaff", staffEmail);
+      }
       router.push("/dashboard");
     } catch (error: any) {
       toast({
@@ -82,17 +89,16 @@ export default function LoginPage() {
     const demoEmail = "demo@mwaliko.com";
     const demoPassword = "password123";
     try {
-      const cred = await signInWithEmailAndPassword(auth, demoEmail, demoPassword);
-      await provisionUserRole(cred.user.uid, "EventAdmin");
+      let cred;
+      try {
+        cred = await signInWithEmailAndPassword(auth, demoEmail, demoPassword);
+      } catch (e) {
+        cred = await createUserWithEmailAndPassword(auth, demoEmail, demoPassword);
+      }
+      await provisionUserRole(cred.user.uid, "EventAdmin", demoEmail);
       router.push("/dashboard");
     } catch (error: any) {
-      try {
-        const cred = await createUserWithEmailAndPassword(auth, demoEmail, demoPassword);
-        await provisionUserRole(cred.user.uid, "EventAdmin");
-        router.push("/dashboard");
-      } catch (e) {
-        toast({ variant: "destructive", title: "Demo Failed", description: "Access error" });
-      }
+      toast({ variant: "destructive", title: "Demo Failed", description: "Access error" });
     } finally {
       setLoading(false);
     }
@@ -104,17 +110,16 @@ export default function LoginPage() {
     const demoPassword = "password123";
     const staffEmail = `${demoUsername}@staff.mwaliko.com`;
     try {
-      const cred = await signInWithEmailAndPassword(auth, staffEmail, demoPassword);
-      await provisionUserRole(cred.user.uid, "ScannerStaff");
+      let cred;
+      try {
+        cred = await signInWithEmailAndPassword(auth, staffEmail, demoPassword);
+      } catch (e) {
+        cred = await createUserWithEmailAndPassword(auth, staffEmail, demoPassword);
+      }
+      await provisionUserRole(cred.user.uid, "ScannerStaff", staffEmail);
       router.push("/dashboard");
     } catch (error: any) {
-      try {
-        const cred = await createUserWithEmailAndPassword(auth, staffEmail, demoPassword);
-        await provisionUserRole(cred.user.uid, "ScannerStaff");
-        router.push("/dashboard");
-      } catch (e) {
-        toast({ variant: "destructive", title: "Demo Failed", description: "Access error" });
-      }
+      toast({ variant: "destructive", title: "Demo Failed", description: "Access error" });
     } finally {
       setLoading(false);
     }

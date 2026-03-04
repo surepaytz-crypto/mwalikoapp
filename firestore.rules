@@ -19,49 +19,53 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function isSuperAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_superAdmins/$(request.auth.uid));
+      return isSignedIn() && getUserData().userRole == 'SuperAdmin';
     }
 
     function isEventAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_eventAdmins/$(request.auth.uid));
+      return isSignedIn() && getUserData().userRole == 'EventAdmin';
+    }
+
+    function isScannerStaff() {
+      return isSignedIn() && getUserData().userRole == 'ScannerStaff';
     }
 
     function isAssignedStaff(eventId) {
-      return isSignedIn() && exists(/databases/$(database)/documents/events/$(eventId)/staffAssignments/$(request.auth.uid));
+      return isSignedIn() && (
+        isScannerStaff() || 
+        exists(/databases/$(database)/documents/events/$(eventId)/staffAssignments/$(request.auth.uid))
+      );
     }
 
     // --- Collection Rules ---
 
     match /users/{userId} {
-      allow get, list: if isSignedIn() && (isOwner(userId) || isSuperAdmin());
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-    }
-
-    match /roles_eventAdmins/{userId} {
-      allow get: if isSignedIn() && (isOwner(userId) || isSuperAdmin());
-      allow list: if isSuperAdmin();
-      allow create: if isSignedIn(); // Allow role assignment for demo purposes or self-service
-      allow update: if isSuperAdmin();
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isOwner(userId) || isSuperAdmin();
     }
 
     match /events/{eventId} {
-      // List rules are strictly enforced: query must filter by eventAdminId or staff assignment
+      // Allow access if user is Admin of the event, SuperAdmin, or assigned Staff
       allow get, list: if isSignedIn() && (
         isSuperAdmin() || 
         (resource != null && resource.data.eventAdminId == request.auth.uid) ||
         isAssignedStaff(eventId)
       );
       
-      allow create: if isEventAdmin() && request.resource.data.eventAdminId == request.auth.uid;
+      allow create: if isEventAdmin();
       
       allow update, delete: if isSignedIn() && (
         isSuperAdmin() || 
         (resource != null && resource.data.eventAdminId == request.auth.uid)
       );
       
-      // Allow access to subcollections
+      // Allow access to subcollections for authorized users
       match /{allSubcollections=**} {
         allow get, list, write: if isSignedIn() && (
           isSuperAdmin() || 
@@ -74,14 +78,6 @@ service cloud.firestore {
     match /venues/{venueId} {
       allow read: if isSignedIn();
       allow write: if isSuperAdmin();
-    }
-
-    match /{globalCollection}/{id} {
-      function isGlobalCollection() {
-        return globalCollection in ['guests', 'globalGuestCategories', 'globalInvitationTemplates'];
-      }
-      allow get, list: if isGlobalCollection() && isSignedIn();
-      allow write: if isGlobalCollection() && isSuperAdmin();
     }
   }
 }

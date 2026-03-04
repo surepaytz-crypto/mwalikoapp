@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useTranslation } from "@/context/LanguageContext";
@@ -65,28 +64,21 @@ export default function Dashboard() {
   
   const { data: events, isLoading: eventsLoading } = useCollection(eventsQuery);
 
-  // Handle Staff Redirect: Find assignment and move to scanner
+  // Handle Staff Redirect: Find any event and move to scanner
   useEffect(() => {
     if (userProfile?.userRole === "ScannerStaff") {
-      const findAssignment = async () => {
-        const staffEmailUsername = user?.email?.split('@')[0];
-        // Note: For large scale, a collectionGroup query would be used here.
-        // For MVP, we'll try to find any event the staff is assigned to.
+      const redirectStaff = async () => {
         const eventsSnap = await getDocs(collection(db, "events"));
-        for (const eventDoc of eventsSnap.docs) {
-          const staffSnap = await getDocs(query(
-            collection(db, "events", eventDoc.id, "staffAssignments"),
-            where("username", "==", staffEmailUsername)
-          ));
-          if (!staffSnap.empty) {
-            router.push(`/events/${eventDoc.id}/scan`);
-            return;
-          }
+        if (!eventsSnap.empty) {
+          // Redirect to the first available event for demo purposes
+          router.push(`/events/${eventsSnap.docs[0].id}/scan`);
+        } else {
+          toast({ variant: "destructive", title: "No Events Found", description: "Ask your admin to create a demo event." });
         }
       };
-      findAssignment();
+      redirectStaff();
     }
-  }, [userProfile, user, db, router]);
+  }, [userProfile, user, db, router, toast]);
 
   useEffect(() => {
     if (events && events.length > 0 && !activeEventId) {
@@ -167,23 +159,27 @@ export default function Dashboard() {
     setIsEditDialogOpen(true);
   };
 
-  const handleCreateDemoEvent = () => {
+  const handleCreateDemoEvent = async () => {
     if (!db || !user) return;
     const shortId = "PIMA1";
-    addDoc(collection(db, "events"), {
-      shortId,
-      nameEn: "Harusi ya Pima na Jenifa",
-      nameSw: "Harusi ya Pima na Jenifa",
-      startDate: new Date(Date.now() + 86400000 * 30).toISOString(), 
-      venue: "Mlimani City Hall, Dar es Salaam",
-      guestCapacity: 1000,
-      categories: [], 
-      isActive: true,
-      eventAdminId: user.uid,
-      stats: {},
-      invitedTotals: {}
-    });
-    toast({ title: "Demo Event Created", description: "Harusi ya Pima na Jenifa is now active." });
+    try {
+      await addDoc(collection(db, "events"), {
+        shortId,
+        nameEn: "Harusi ya Pima na Jenifa",
+        nameSw: "Harusi ya Pima na Jenifa",
+        startDate: new Date(Date.now() + 86400000 * 30).toISOString(), 
+        venue: "Mlimani City Hall, Dar es Salaam",
+        guestCapacity: 1000,
+        categories: [], 
+        isActive: true,
+        eventAdminId: user.uid,
+        stats: {},
+        invitedTotals: {}
+      });
+      toast({ title: "Demo Event Created", description: "Harusi ya Pima na Jenifa is now active." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Creation Failed", description: e.message });
+    }
   };
 
   const handleCsvSimulation = async (eventId: string) => {
@@ -291,7 +287,7 @@ export default function Dashboard() {
     deleteDoc(doc(db, "events", activeEventId, "staffAssignments", staffId));
   };
 
-  if (isUserLoading || eventsLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
+  if (isUserLoading || eventsLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
   if (!user) return null;
 
   // If staff, show simple loading while redirect happens
