@@ -46,13 +46,10 @@ export default function Dashboard() {
       venue: "Serena Hotel Ballroom",
       status: "Planning",
       guestCapacity: 500,
-      categories: ["VIP", "Standard", "VVIP", "Press", "Staff"],
+      categories: ["VIP", "Standard", "VVIP"],
       isActive: true,
       eventAdminId: user.uid,
-      stats: {
-        "VIP": { gate: 0, drinks: 0, food: 0, total: 150 },
-        "Standard": { gate: 0, drinks: 0, food: 0, total: 350 },
-      }
+      stats: {}
     });
   };
 
@@ -60,11 +57,12 @@ export default function Dashboard() {
     if (!db) return;
     setIsUploading(true);
     
-    // Simulate parsing a CSV with: Name, Ticket Number, Category
+    // New CSV Format: Ticket Number, Name, Category
     const mockData = [
-      { name: "Hon. Kassim Majaliwa", ticketId: "MW-778899", category: "VIP" },
-      { name: "John Doe", ticketId: "MW-112233", category: "Standard" },
-      { name: "Jane Smith", ticketId: "MW-445566", category: "Standard" },
+      { ticketId: "MW-778899", name: "Hon. Kassim Majaliwa", category: "VIP" },
+      { ticketId: "MW-112233", name: "John Doe", category: "Standard" },
+      { ticketId: "MW-445566", name: "Jane Smith", category: "Standard" },
+      { ticketId: "MW-990011", name: "Salum Khalfan", category: "VVIP" },
     ];
 
     try {
@@ -84,7 +82,7 @@ export default function Dashboard() {
         });
       });
       await batch.commit();
-      toast({ title: "Import Successful", description: `${mockData.length} guests imported from CSV simulation.` });
+      toast({ title: "Import Successful", description: `${mockData.length} guests imported from CSV (Ticket Number, Name, Category).` });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Import Failed", description: e.message });
     } finally {
@@ -119,7 +117,7 @@ export default function Dashboard() {
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="font-headline text-3xl font-bold text-primary">{t('dashboard')}</h1>
-            <p className="text-muted-foreground">Managing your premium event access</p>
+            <p className="text-muted-foreground">Premium registry and real-time checkpoint analytics</p>
           </div>
           <div className="flex gap-2">
             {activeEvent && (
@@ -132,11 +130,11 @@ export default function Dashboard() {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>{t('uploadCsv')}</DialogTitle>
-                    <DialogDescription>Format: Name, Ticket Number, Category</DialogDescription>
+                    <DialogDescription>Format required: Ticket Number, Name, Category</DialogDescription>
                   </DialogHeader>
                   <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed rounded-lg border-muted-foreground/20 bg-muted/5">
                     <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground mb-4">Drop your CSV here or click to browse</p>
+                    <p className="text-sm text-muted-foreground mb-4 text-center px-4">Ensure CSV columns are exactly: Ticket Number, Name, Category</p>
                     <Button onClick={() => handleCsvSimulation(activeEvent.id)} disabled={isUploading}>
                       {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('processing')}</> : "Simulate CSV Import"}
                     </Button>
@@ -151,22 +149,22 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard icon={<Calendar className="h-5 w-5" />} title={t('events')} value={events?.length.toString() || "0"} label="Active Projects" />
-          <StatCard icon={<TrendingUp className="h-5 w-5" />} title="Scan Point" value="3-Point" label="Gate, Drinks, Food" />
-          <StatCard icon={<Users className="h-5 w-5" />} title="Registry" value={activeEvent ? activeEvent.guestCapacity?.toString() : "0"} label="Guest Capacity" />
-          <StatCard icon={<QrCode className="h-5 w-5" />} title="Tiers" value={activeEvent ? `${activeEvent.categories?.length || 0}` : "0"} label="Dynamic Categories" />
+          <StatCard icon={<Calendar className="h-5 w-5" />} title={t('events')} value={events?.length.toString() || "0"} label="Total Events" />
+          <StatCard icon={<TrendingUp className="h-5 w-5" />} title="Security Point" value="3-Point" label="Gate, Drinks, Food" />
+          <StatCard icon={<Users className="h-5 w-5" />} title="Capacity" value={activeEvent ? activeEvent.guestCapacity?.toString() : "0"} label="Total Invitations" />
+          <StatCard icon={<QrCode className="h-5 w-5" />} title="Tiers" value={activeEvent ? `${activeEvent.categories?.length || 0}` : "0"} label="Active Categories" />
         </div>
 
         {activeEvent && (
           <Tabs defaultValue="analytics" className="mt-12">
             <TabsList className="grid w-full grid-cols-2 max-w-[400px] mb-8">
-              <TabsTrigger value="analytics">Live Category Analytics</TabsTrigger>
-              <TabsTrigger value="staff">Staff Management</TabsTrigger>
+              <TabsTrigger value="analytics">Live Category Stats</TabsTrigger>
+              <TabsTrigger value="staff">Staff Access</TabsTrigger>
             </TabsList>
             
             <TabsContent value="analytics" className="space-y-8">
               <div className="flex items-center justify-between">
-                 <h2 className="font-headline text-2xl font-bold">Live Stats: {activeEvent.nameEn}</h2>
+                 <h2 className="font-headline text-2xl font-bold">Registry Stats: {activeEvent.nameEn}</h2>
                  <Dialog>
                     <DialogTrigger asChild>
                       <Button variant="ghost" size="sm" className="text-accent underline decoration-accent/30 underline-offset-4">
@@ -176,6 +174,7 @@ export default function Dashboard() {
                     <DialogContent>
                        <DialogHeader>
                          <DialogTitle>{t('manageCategories')}</DialogTitle>
+                         <DialogDescription>Define all guest tiers for this event.</DialogDescription>
                        </DialogHeader>
                        <div className="space-y-4 py-4">
                           <div className="flex flex-wrap gap-2">
@@ -219,7 +218,7 @@ export default function Dashboard() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Shield className="h-5 w-5 text-accent" />
-                    Staff Access Control
+                    Assign Scanning Staff
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -227,19 +226,19 @@ export default function Dashboard() {
                     <div className="flex-1 space-y-2">
                       <Label>Staff Email or User ID</Label>
                       <Input 
-                        placeholder="staff@mwaliko.com" 
+                        placeholder="scanner@mwaliko.com" 
                         value={staffEmail}
                         onChange={(e) => setStaffEmail(e.target.value)}
                       />
                     </div>
                     <Button>
-                      <UserPlus className="mr-2 h-4 w-4" /> Assign Scanner
+                      <UserPlus className="mr-2 h-4 w-4" /> Add Scanner
                     </Button>
                   </div>
                   
-                  <div className="border rounded-lg p-4 bg-muted/20">
-                    <h4 className="text-sm font-bold mb-2">Assigned Scanner Staff</h4>
-                    <p className="text-xs text-muted-foreground italic">No staff assigned yet. Assigned staff will be able to use the "Scanner" page for this event.</p>
+                  <div className="border rounded-lg p-6 bg-muted/20 text-center">
+                    <h4 className="text-sm font-bold mb-2">Authenticated Scanners</h4>
+                    <p className="text-xs text-muted-foreground italic">List of staff members authorized to use the QR scanner for this event.</p>
                   </div>
                 </CardContent>
               </Card>
@@ -248,7 +247,7 @@ export default function Dashboard() {
         )}
 
         <div className="mt-12">
-          <h2 className="font-headline text-2xl font-bold mb-6">Recent Events</h2>
+          <h2 className="font-headline text-2xl font-bold mb-6">Active Projects</h2>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {events?.map((event) => (
               <EventItem 
@@ -261,9 +260,10 @@ export default function Dashboard() {
               />
             ))}
             {!isLoading && events?.length === 0 && (
-              <p className="text-muted-foreground col-span-2 text-center py-10 bg-muted/20 rounded-xl border-2 border-dashed">
-                {t('noEvents')}
-              </p>
+              <div className="col-span-2 text-center py-20 bg-muted/10 rounded-2xl border-2 border-dashed">
+                <p className="text-muted-foreground mb-4">{t('noEvents')}</p>
+                <Button onClick={handleCreateMockEvent} variant="outline" className="border-accent text-accent">Initialize New Event</Button>
+              </div>
             )}
           </div>
         </div>
@@ -274,8 +274,8 @@ export default function Dashboard() {
 
 function ScanAnalyticsCard({ icon, title, event, checkpoint }: { icon: React.ReactNode, title: string, event: any, checkpoint: string }) {
   const categories = event.categories || ["VIP", "Standard"];
-  const totalScanned = categories.reduce((acc: number, cat: string) => acc + (event.stats?.[cat]?.[checkpoint] || 0), 0);
   const totalPossible = event.guestCapacity || 100;
+  const totalScanned = categories.reduce((acc: number, cat: string) => acc + (event.stats?.[cat]?.[checkpoint] || 0), 0);
   const percentage = totalPossible > 0 ? (totalScanned / totalPossible) * 100 : 0;
 
   return (
@@ -286,15 +286,15 @@ function ScanAnalyticsCard({ icon, title, event, checkpoint }: { icon: React.Rea
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex justify-between text-sm mb-1">
-          <span className="font-bold">{totalScanned} / {totalPossible} Scanned</span>
+          <span className="font-bold">{totalScanned} Check-ins</span>
           <span className="text-accent font-bold">{Math.round(percentage)}%</span>
         </div>
         <Progress value={percentage} className="h-2" />
-        <div className="grid grid-cols-1 gap-2 pt-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+        <div className="grid grid-cols-1 gap-2 pt-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
           {categories.map((cat: string) => (
             <div key={cat} className="bg-muted/30 p-2 rounded-lg flex justify-between items-center text-xs">
               <span className="uppercase font-bold text-muted-foreground">{cat}</span>
-              <span className="font-bold">{event.stats?.[cat]?.[checkpoint] || 0} / {event.stats?.[cat]?.total || "?"}</span>
+              <span className="font-bold">{event.stats?.[cat]?.[checkpoint] || 0} Scanned</span>
             </div>
           ))}
         </div>
@@ -320,9 +320,9 @@ function StatCard({ icon, title, value, label }: { icon: React.ReactNode, title:
 
 function EventItem({ id, name, date, guests, status }: { id: string, name: string, date: string, guests: string, status: string }) {
   return (
-    <div className="flex items-center justify-between p-6 bg-card border rounded-xl shadow-sm hover:shadow-md transition-all">
+    <div className="flex items-center justify-between p-6 bg-card border rounded-xl shadow-sm hover:shadow-md transition-all group">
       <div className="space-y-1">
-        <h3 className="font-bold text-lg">{name}</h3>
+        <h3 className="font-bold text-lg group-hover:text-accent transition-colors">{name}</h3>
         <p className="text-sm text-muted-foreground flex items-center gap-2">
           <Calendar className="h-3 w-3" /> {date} &bull; <Users className="h-3 w-3" /> {guests} Max
         </p>
@@ -331,7 +331,7 @@ function EventItem({ id, name, date, guests, status }: { id: string, name: strin
         <div className="px-3 py-1 rounded-full bg-accent/10 text-accent text-[10px] font-bold uppercase tracking-widest">{status}</div>
         <div className="flex gap-2">
           <Link href={`/events/${id}/scan`}><Button variant="outline" size="sm" className="text-xs"><QrCode className="mr-1 h-3 w-3" /> Scan</Button></Link>
-          <Link href={`/events/${id}/invite`}><Button variant="ghost" size="sm" className="text-xs text-accent">Invite</Button></Link>
+          <Link href={`/events/${id}/invite`}><Button variant="ghost" size="sm" className="text-xs text-accent">Manage</Button></Link>
         </div>
       </div>
     </div>

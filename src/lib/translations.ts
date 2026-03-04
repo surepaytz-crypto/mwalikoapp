@@ -53,10 +53,11 @@ export const translations = {
     statusValid: "VALID",
     statusInvalid: "INVALID",
     statusUsed: "ALREADY USED",
-    manualVerification: "Manual Entry",
+    manualVerification: "Manual Ticket Entry",
     checkStatus: "Check Status",
     uploadCsv: "Upload CSV",
     processing: "Processing...",
+    importFormat: "Format: Ticket Number, Name, Category",
   },
   sw: {
     appName: "Mwaliko App",
@@ -111,10 +112,11 @@ export const translations = {
     statusValid: "HALALI",
     statusInvalid: "SIYO HALALI",
     statusUsed: "ISHATUMIKA",
-    manualVerification: "Ingiza kwa Mkono",
+    manualVerification: "Ingiza Tiketi kwa Mkono",
     checkStatus: "Kagua Hali",
     uploadCsv: "Pakia CSV",
     processing: "Inasindika...",
+    importFormat: "Mfumo: Namba ya Tiketi, Jina, Kundi",
   }
 };
 
