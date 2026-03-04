@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Sparkles, UserPlus, Mail, ShieldCheck, ScrollText } from "lucide-react";
+import { Loader2, Sparkles, UserPlus, Mail, ShieldCheck, ScrollText, Signature } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -121,29 +121,45 @@ export default function RegisterPage() {
 
   if (isVerificationSent) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background font-body">
         <Navbar />
         <div className="container mx-auto flex flex-col items-center justify-center p-4 py-20">
-          <Card className="w-full max-w-md border-none shadow-2xl bg-card/50 backdrop-blur text-center">
-            <CardHeader>
-              <div className="mx-auto w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mb-4">
-                <Mail className="h-8 w-8 text-accent animate-bounce" />
+          <Card className="w-full max-w-lg border-none shadow-[0_35px_60px_-15px_rgba(0,0,0,0.2)] bg-card overflow-hidden">
+             <div className="bg-primary p-10 text-center">
+                <h2 className="text-accent font-headline text-4xl font-bold tracking-[0.2em]">MWALIKO</h2>
+             </div>
+            <CardHeader className="text-center pt-10">
+              <div className="mx-auto w-24 h-24 bg-accent/10 rounded-full flex items-center justify-center mb-6 border border-accent/20">
+                <Mail className="h-12 w-12 text-accent" />
               </div>
-              <CardTitle className="text-2xl font-headline font-bold">Verify Your Email</CardTitle>
-              <CardDescription>
-                We've sent a confirmation link to <strong>{formData.email}</strong>. 
-                Please click the link in that email to activate your account.
+              <CardTitle className="text-3xl font-headline font-bold text-primary">Check Your Inbox</CardTitle>
+              <CardDescription className="text-lg mt-3">
+                Welcome to the Inner Circle, <strong>{formData.firstName}</strong>.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Once verified, you will be able to access your Mwaliko Dashboard and start creating premium event registries.
+            <CardContent className="px-10 pb-6 text-center space-y-6">
+              <p className="text-muted-foreground leading-relaxed">
+                A verification link has been sent to <strong>{formData.email}</strong>. 
+                Please click the link in that email to activate your 360 Digital registry account.
               </p>
+              
+              <div className="p-8 bg-muted/20 rounded-2xl border border-muted space-y-4 text-left">
+                <div className="flex gap-4">
+                  <ShieldCheck className="h-6 w-6 text-accent shrink-0" />
+                  <p className="text-sm italic opacity-80">
+                    "Our vision at 360 Digital is to restore elegance and security to event management. We're glad to have you with us."
+                  </p>
+                </div>
+                <div className="pt-4 border-t border-muted-foreground/10">
+                   <p className="text-xs font-bold text-primary mb-0.5">Kennedy John</p>
+                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Founder, 360 Digital</p>
+                </div>
+              </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="pb-10 px-10">
               <Link href="/login" className="w-full">
-                <Button variant="outline" className="w-full">
-                  Return to Login
+                <Button variant="outline" className="w-full h-14 border-primary/20 hover:bg-muted font-bold">
+                  Return to Executive Login
                 </Button>
               </Link>
             </CardFooter>

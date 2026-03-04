@@ -3,7 +3,7 @@
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check, Info, ArrowRight, ShieldCheck, Mail } from "lucide-react";
+import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check, Info, ArrowRight, ShieldCheck, Mail, Signature } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc } from "@/firebase";
@@ -343,33 +343,49 @@ export default function Dashboard() {
   if (isUserLoading || eventsLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
   if (!user) return null;
 
-  // Email Verification Guard
+  // Email Verification Guard - Branded
   if (userProfile?.userRole === "EventAdmin" && !user.emailVerified) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background font-body">
         <Navbar />
         <div className="container mx-auto flex flex-col items-center justify-center p-4 py-20">
-          <Card className="w-full max-w-md border-none shadow-2xl bg-card/50 backdrop-blur text-center">
-            <CardHeader>
-              <div className="mx-auto w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mb-4">
-                <Mail className="h-8 w-8 text-accent animate-bounce" />
+          <Card className="w-full max-w-lg border-none shadow-[0_35px_60px_-15px_rgba(0,0,0,0.1)] bg-card overflow-hidden">
+             <div className="bg-primary p-8 text-center">
+                <h2 className="text-accent font-headline text-3xl font-bold tracking-[0.2em]">MWALIKO</h2>
+             </div>
+            <CardHeader className="text-center pb-2">
+              <div className="mx-auto w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center mb-6">
+                <Mail className="h-10 w-10 text-accent" />
               </div>
-              <CardTitle className="text-2xl font-headline font-bold text-primary">Verify Your Email</CardTitle>
-              <CardDescription>
-                Access to the Mwaliko Dashboard is locked until you verify your email address. 
-                Please check <strong>{user.email}</strong> for the verification link.
+              <CardTitle className="text-3xl font-headline font-bold text-primary">Activation Required</CardTitle>
+              <CardDescription className="text-lg mt-2">
+                Welcome to Mwaliko, <strong>{userProfile?.firstName}</strong>.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="p-4 bg-muted/50 rounded-xl border space-y-2 text-sm">
-                <p className="font-semibold">Didn't receive the email?</p>
-                <p className="opacity-70">Check your spam folder or wait a few minutes. You may need to refresh this page after clicking the link in your email.</p>
+            <CardContent className="px-10 pb-10 text-center space-y-6">
+              <p className="text-muted-foreground leading-relaxed">
+                We have sent an official activation link to your inbox at <strong>{user.email}</strong>. 
+                Please verify your email to begin managing your premium registries.
+              </p>
+              
+              <div className="p-6 bg-muted/30 rounded-2xl border border-dashed border-muted-foreground/20 space-y-4">
+                <div className="flex items-center gap-4 text-left">
+                  <ShieldCheck className="h-8 w-8 text-accent shrink-0" />
+                  <p className="text-xs italic opacity-70 italic">
+                    "At 360 Digital, your security and event integrity are our highest priority. This verification ensures your administrative access remains exclusive."
+                  </p>
+                </div>
+                <div className="pt-4 border-t border-muted text-left">
+                   <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">Kennedy John</p>
+                   <p className="text-[9px] text-muted-foreground uppercase tracking-tighter">Founder, 360 Digital</p>
+                </div>
               </div>
             </CardContent>
-            <CardFooter>
-              <Button onClick={() => window.location.reload()} className="w-full bg-accent text-accent-foreground">
+            <CardFooter className="bg-muted/10 p-8 flex flex-col gap-4">
+              <Button onClick={() => window.location.reload()} className="w-full h-14 text-lg bg-primary hover:bg-primary/90 text-white font-bold shadow-lg">
                 I've Verified My Email
               </Button>
+              <p className="text-[10px] text-center text-muted-foreground">Didn't see it? Check your spam folder or wait 2 minutes.</p>
             </CardFooter>
           </Card>
         </div>
