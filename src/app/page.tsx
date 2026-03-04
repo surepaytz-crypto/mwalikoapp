@@ -1,33 +1,33 @@
 
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { useTranslation } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { Calendar, Users, QrCode, Sparkles } from "lucide-react";
+import { Calendar, Users, QrCode, ShieldCheck } from "lucide-react";
 
 export default function Home() {
   const { t } = useTranslation();
-  const heroImage = PlaceHolderImages.find(img => img.id === 'hero-lux');
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
       
       <main className="flex-1">
-        {/* Hero Section */}
+        {/* Hero Section with Video */}
         <section className="relative h-[85vh] w-full overflow-hidden">
-          <Image
-            src={heroImage?.imageUrl || "https://picsum.photos/seed/mwaliko1/1200/800"}
-            alt="Luxurious Event"
-            fill
-            className="object-cover brightness-50"
-            priority
-            data-ai-hint="luxury event"
-          />
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover brightness-50"
+          >
+            <source src="https://assets.mixkit.co/videos/preview/mixkit-people-walking-in-a-busy-street-4428-large.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+          
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="container px-4 text-center text-white">
               <h1 className="mb-6 font-headline text-5xl font-bold tracking-tight md:text-7xl">
@@ -43,7 +43,7 @@ export default function Home() {
                   </Button>
                 </Link>
                 <Link href="/login">
-                  <Button size="lg" variant="outline" className="h-14 px-10 text-lg border-white text-white hover:bg-white/10 backdrop-blur-md">
+                  <Button size="lg" className="h-14 px-10 text-lg bg-accent text-accent-foreground hover:bg-accent/90 border-none shadow-xl">
                     {t('login')}
                   </Button>
                 </Link>
@@ -56,7 +56,7 @@ export default function Home() {
         <section className="py-24 bg-background">
           <div className="container mx-auto px-4">
             <div className="mb-16 text-center">
-              <h2 className="mb-4 font-headline text-4xl font-bold text-primary">Core Services</h2>
+              <h2 className="mb-4 font-headline text-4xl font-bold text-primary">Premium Event Management</h2>
               <div className="mx-auto h-1 w-20 bg-accent"></div>
             </div>
 
@@ -67,47 +67,38 @@ export default function Home() {
                 description="Manage multiple entry phases and venues with refined ease."
               />
               <FeatureCard 
-                icon={<Users className="h-8 w-8 text-accent" />}
-                title={t('guests')}
-                description="Effortless guest listing and personalized categories for your elite attendees."
+                icon={<ShieldCheck className="h-8 w-8 text-accent" />}
+                title="Triple Scan Security"
+                description="Three-point verification logic: Main Entry, Security Check, and VIP Lounge access."
               />
               <FeatureCard 
                 icon={<QrCode className="h-8 w-8 text-accent" />}
-                title={t('scan')}
-                description="Swift validation using our state-of-the-art QR verification system."
+                title="Print-Ready Invites"
+                description="Generate high-resolution invitations with unique QR codes for physical printing."
               />
             </div>
           </div>
         </section>
 
-        {/* GenAI Highlight Section */}
+        {/* New 3-Point Logic Highlight */}
         <section className="py-24 bg-primary text-primary-foreground relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-accent/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
-          <div className="container mx-auto px-4 relative z-10">
-            <div className="flex flex-col md:flex-row items-center gap-16">
-              <div className="flex-1 space-y-6 text-center md:text-left">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/20 border border-accent/30">
-                  <Sparkles className="h-4 w-4 text-accent" />
-                  <span className="text-xs font-bold uppercase tracking-widest text-accent">AI Powered</span>
-                </div>
-                <h2 className="font-headline text-4xl md:text-5xl font-bold">Personalized Excellence</h2>
-                <p className="text-lg text-primary-foreground/70 font-light leading-relaxed">
-                  Our AI engine crafts unique invitation content and templates that match the prestige of your event. 
-                  Send personalized WhatsApp messages and luxurious digital cards in seconds.
-                </p>
-                <Link href="/login">
-                  <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                    Try AI Designer
-                  </Button>
-                </Link>
+          <div className="container mx-auto px-4 relative z-10 text-center max-w-4xl">
+            <h2 className="font-headline text-4xl md:text-5xl font-bold mb-6">Uncompromising Security Control</h2>
+            <p className="text-lg text-primary-foreground/70 font-light leading-relaxed mb-10">
+              Our 3-point scan logic ensures every phase of your event is secured. Track guest movement from the Main Entrance to the Security Check and finally to the VIP Lounge.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-6 rounded-xl bg-white/5 backdrop-blur border border-white/10">
+                <div className="text-accent font-bold text-xl mb-2">1. Main Entrance</div>
+                <p className="text-sm opacity-60">Initial guest verification</p>
               </div>
-              <div className="flex-1 w-full max-w-lg aspect-video rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-8 shadow-2xl flex items-center justify-center">
-                <div className="text-center space-y-4">
-                  <div className="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto">
-                    <QrCode className="h-8 w-8 text-accent" />
-                  </div>
-                  <p className="text-sm font-medium italic opacity-50">Secure QR Integration Preview</p>
-                </div>
+              <div className="p-6 rounded-xl bg-white/5 backdrop-blur border border-white/10">
+                <div className="text-accent font-bold text-xl mb-2">2. Security Check</div>
+                <p className="text-sm opacity-60">Crowd control & screening</p>
+              </div>
+              <div className="p-6 rounded-xl bg-white/5 backdrop-blur border border-white/10">
+                <div className="text-accent font-bold text-xl mb-2">3. VIP Access</div>
+                <p className="text-sm opacity-60">Exclusive area validation</p>
               </div>
             </div>
           </div>

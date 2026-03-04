@@ -1,3 +1,4 @@
+
 export const translations = {
   en: {
     appName: "Mwaliko App",
@@ -5,7 +6,7 @@ export const translations = {
     dashboard: "Dashboard",
     events: "Events",
     guests: "Guests",
-    scan: "Scan QR",
+    scan: "Verify QR",
     settings: "Settings",
     login: "Login",
     register: "Register",
@@ -19,9 +20,9 @@ export const translations = {
     addGuest: "Add Guest",
     importGuests: "Import Guests",
     rsvpStatus: "RSVP Status",
-    scanned: "Scanned",
+    scanned: "Check-ins",
     totalGuests: "Total Guests",
-    generateInvite: "Generate Invitation",
+    generateInvite: "Invitation Center",
     welcome: "Welcome back",
     logout: "Logout",
     language: "Language",
@@ -31,9 +32,9 @@ export const translations = {
     cancel: "Cancel",
     actions: "Actions",
     noEvents: "No events found. Start by creating one.",
-    luxuryDescription: "Crafting experiences that resonate through time.",
-    qrScanner: "QR Code Scanner",
-    verifyGuest: "Verify Guest",
+    luxuryDescription: "Premium security and invitations for distinguished events.",
+    qrScanner: "QR Verification",
+    verifyGuest: "Thibitisha Mgeni",
   },
   sw: {
     appName: "Mwaliko App",
@@ -41,7 +42,7 @@ export const translations = {
     dashboard: "Dashibodi",
     events: "Matukio",
     guests: "Wageni",
-    scan: "Kagua QR",
+    scan: "Thibitisha QR",
     settings: "Mipangilio",
     login: "Ingia",
     register: "Jisajili",
@@ -57,7 +58,7 @@ export const translations = {
     rsvpStatus: "Hali ya RSVP",
     scanned: "Waliokaguliwa",
     totalGuests: "Jumla ya Wageni",
-    generateInvite: "Tengeneza Mwaliko",
+    generateInvite: "Kituo cha Mialiko",
     welcome: "Karibu tena",
     logout: "Ondoka",
     language: "Lugha",
@@ -67,8 +68,8 @@ export const translations = {
     cancel: "Ghairi",
     actions: "Vitendo",
     noEvents: "Hakuna matukio yaliyopatikana. Anza kwa kuunda moja.",
-    luxuryDescription: "Kutengeneza matukio yatakayoacha alama kwa muda mrefu.",
-    qrScanner: "Kikagua QR Code",
+    luxuryDescription: "Ulinzi na mialiko ya kiwango cha juu kwa matukio maalum.",
+    qrScanner: "Uhaki wa QR",
     verifyGuest: "Thibitisha Mgeni",
   }
 };
