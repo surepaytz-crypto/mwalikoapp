@@ -4,9 +4,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { useToast } from "@/hooks/use-toast";
-import { QrCode, ArrowLeft, RefreshCw, CheckCircle2, XCircle, ShieldCheck, Search, Key, Info, MapPin, Loader2 } from "lucide-react";
+import { QrCode, ArrowLeft, RefreshCw, CheckCircle2, XCircle, Search, Key, Info, MapPin, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -21,7 +19,6 @@ type ScanStatus = "idle" | "scanning" | "valid" | "invalid" | "used";
 export default function ScanPage() {
   const { t } = useTranslation();
   const { id: eventId } = useParams();
-  const { toast } = useToast();
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
@@ -33,7 +30,6 @@ export default function ScanPage() {
   const [scannedGuest, setScannedGuest] = useState<{ name: string, category: string } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Event info for validation
   const eventRef = useMemoFirebase(() => {
     if (!db || !eventId) return null;
     return doc(db, "events", eventId as string);
@@ -86,22 +82,15 @@ export default function ScanPage() {
         return;
       }
 
-      // Mark as scanned
-      await updateDoc(guestDoc.ref, {
-        [checkpointField]: true
-      });
+      await updateDoc(guestDoc.ref, { [checkpointField]: true });
 
-      // Update aggregate stats on parent event
       const eventRef = doc(db, "events", eventId as string);
       const statPath = `stats.${guestData.category}.${activeCheckpoint.toLowerCase()}`;
-      await updateDoc(eventRef, {
-        [statPath]: increment(1)
-      });
+      await updateDoc(eventRef, { [statPath]: increment(1) });
 
       setScannedGuest({ name: guestData.guestName, category: guestData.category });
       setStatus("valid");
     } catch (e: any) {
-      console.error(e);
       setStatus("invalid");
     }
   };
@@ -135,10 +124,7 @@ export default function ScanPage() {
             <MapPin className="h-4 w-4 text-accent" />
             <label className="text-[10px] font-bold uppercase tracking-widest opacity-70">Active Checkpoint</label>
           </div>
-          <Select 
-            value={activeCheckpoint} 
-            onValueChange={(v) => setActiveCheckpoint(v as Checkpoint)}
-          >
+          <Select value={activeCheckpoint} onValueChange={(v) => setActiveCheckpoint(v as Checkpoint)}>
             <SelectTrigger className="bg-white/10 border-white/30 text-white h-14 rounded-xl text-lg font-bold">
               <SelectValue placeholder="Select Point" />
             </SelectTrigger>
@@ -151,13 +137,7 @@ export default function ScanPage() {
         </div>
 
         <div className="relative w-full max-w-xs aspect-square border-8 border-accent/40 rounded-[2.5rem] overflow-hidden bg-black/60 flex items-center justify-center shadow-[0_0_50px_rgba(212,175,55,0.2)]">
-          <video 
-            ref={videoRef} 
-            className="absolute inset-0 w-full h-full object-cover opacity-80" 
-            autoPlay 
-            muted 
-            playsInline
-          />
+          <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover opacity-80" autoPlay muted playsInline />
 
           {status === "scanning" && (
             <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center space-y-4 z-10 backdrop-blur-md">
@@ -176,13 +156,7 @@ export default function ScanPage() {
                     {scannedGuest?.category}
                  </div>
                </div>
-               <Button 
-                variant="ghost" 
-                className="mt-8 text-white/70 hover:text-white"
-                onClick={() => setStatus("idle")}
-               >
-                 Next Scan
-               </Button>
+               <Button variant="ghost" className="mt-8 text-white/70 hover:text-white" onClick={() => setStatus("idle")}>Next Scan</Button>
             </div>
           )}
 
@@ -191,13 +165,7 @@ export default function ScanPage() {
                <XCircle className="h-24 w-24 text-white mb-4" />
                <h2 className="text-4xl font-black">{t('statusInvalid')}</h2>
                <p className="text-white/80 mt-2 font-bold">Ticket not recognized</p>
-               <Button 
-                variant="ghost" 
-                className="mt-8 text-white/70 hover:text-white"
-                onClick={() => setStatus("idle")}
-               >
-                 Try Again
-               </Button>
+               <Button variant="ghost" className="mt-8 text-white/70 hover:text-white" onClick={() => setStatus("idle")}>Try Again</Button>
             </div>
           )}
 
@@ -208,13 +176,7 @@ export default function ScanPage() {
                <p className="mt-4 text-white/90 font-bold leading-tight">
                 {scannedGuest?.name}<br/>already used at {activeCheckpoint}
                </p>
-               <Button 
-                variant="ghost" 
-                className="mt-8 text-white/70 hover:text-white"
-                onClick={() => setStatus("idle")}
-               >
-                 Acknowledge
-               </Button>
+               <Button variant="ghost" className="mt-8 text-white/70 hover:text-white" onClick={() => setStatus("idle")}>Acknowledge</Button>
             </div>
           )}
           
@@ -234,7 +196,7 @@ export default function ScanPage() {
             <div className="flex gap-2">
               <Input 
                 className="bg-white/10 border-white/30 text-white h-14 rounded-xl text-lg placeholder:text-white/20" 
-                placeholder="Ticket ID (e.g. MW123)"
+                placeholder="Ticket ID (e.g. MW0IQ)"
                 value={ticketIdInput}
                 onChange={(e) => setTicketIdInput(e.target.value)}
               />
@@ -250,17 +212,6 @@ export default function ScanPage() {
             disabled={status === "scanning"}
           >
             {status === "scanning" ? <Loader2 className="animate-spin" /> : "Verify Scan"}
-          </Button>
-
-          <Button 
-            variant="outline" 
-            className="w-full h-12 bg-white/5 border-white/20 text-white hover:bg-white/10 rounded-xl uppercase text-[10px] font-bold tracking-widest"
-            onClick={() => {
-              setStatus("idle");
-              setTicketIdInput("");
-            }}
-          >
-            Reset Verification
           </Button>
         </div>
       </main>

@@ -8,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Download, QrCode, User, MapPin, Printer, MessageSquare, Send, Tag, Loader2, ShieldCheck, Hash } from "lucide-react";
+import { Download, QrCode, User, MapPin, Printer, MessageSquare, Send, ShieldCheck, Loader2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useParams } from "next/navigation";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { doc, collection, addDoc } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,11 +42,10 @@ export default function InvitePage() {
     for (let i = 0; i < 3; i++) {
       randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    return `${prefix}${randomPart}`; // No hyphen requested
+    return `${prefix}${randomPart}`; // No hyphen as requested
   };
 
   useEffect(() => {
-    // Generate initial ID only on client to avoid hydration error
     setTicketId(generateTicketId());
   }, []);
 
@@ -147,7 +146,7 @@ export default function InvitePage() {
                        <ShieldCheck className="h-6 w-6 text-accent shrink-0 mt-1" />
                        <div>
                           <p className="font-bold text-sm">3-Point Scan Policy</p>
-                          <p className="text-xs text-muted-foreground">Each guest is tracked at Gate, Drinks, and Food. No mark ticket IDs are used for easy manual entry.</p>
+                          <p className="text-xs text-muted-foreground">Verification at Gate, Drinks, and Food. No marks on ticket IDs for easy manual entry.</p>
                        </div>
                     </div>
                  </CardContent>
@@ -181,7 +180,7 @@ export default function InvitePage() {
                 <div className="grid grid-cols-2 gap-8 w-full text-sm font-medium">
                   <div className="flex flex-col items-center gap-1">
                     <MapPin className="h-4 w-4 text-accent" />
-                    <span>{event?.venue || "Serena Ballroom"}</span>
+                    <span>{event?.venue || "Venue TBD"}</span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <User className="h-4 w-4 text-accent" />
@@ -206,7 +205,7 @@ export default function InvitePage() {
                 </div>
 
                 <footer className="pt-8 border-t border-black/5 w-full">
-                  <p className="text-[10px] uppercase tracking-widest opacity-50">Mwaliko Premium Registry &bull; Verified Registry</p>
+                  <p className="text-[10px] uppercase tracking-widest opacity-50">Mwaliko Premium Registry &bull; Verified</p>
                 </footer>
               </div>
             </div>
