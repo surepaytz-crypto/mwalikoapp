@@ -22,7 +22,7 @@ export default function Home() {
           <div className="absolute inset-0 opacity-40">
              <Image 
                 src="https://picsum.photos/seed/mwaliko-elegance/1920/1080"
-                alt="Luxury Event Backdrop"
+                alt="Luxury Event Illustration"
                 fill
                 priority
                 className="object-cover"
@@ -76,10 +76,12 @@ export default function Home() {
               <div className="flex-1">
                 <div className="relative p-8 bg-background rounded-3xl border-2 border-accent shadow-xl rotate-2">
                    <div className="space-y-4">
-                     <div className="bg-muted p-3 rounded-lg w-2/3 ml-auto text-xs">Hello Honorable Guest! You are cordially invited to the Luxury Gala Night. Your entry QR code is attached.</div>
+                     <div className="bg-muted p-3 rounded-lg w-2/3 ml-auto text-xs text-primary font-medium">
+                        Habari Mgeni Rasmi! Unakaribishwa kwa furaha kwenye Usiku wa Fahari. Namba yako ya siri ya QR imeambatishwa hapa.
+                     </div>
                      <div className="bg-accent/20 p-4 rounded-xl text-center">
                         <QrCode className="h-20 w-20 mx-auto text-accent mb-2" />
-                        <p className="text-[10px] font-bold uppercase tracking-widest">SECURE ACCESS</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-primary">SECURE ACCESS</p>
                      </div>
                    </div>
                 </div>
@@ -121,22 +123,22 @@ export default function Home() {
           <div className="container mx-auto px-4 relative z-10 text-center max-w-4xl">
             <h2 className="font-headline text-4xl md:text-5xl font-bold mb-6">Uncompromising Security Control</h2>
             <p className="text-lg text-primary-foreground/70 font-light leading-relaxed mb-10">
-              Our 3-point scan logic ensures every phase of your event is tracked. Monitor guest access from the initial entry to refreshment collection.
+              Mwaliko's 3-point scan logic ensures every phase of your event is tracked. Monitor guest access from the initial entry to refreshment collection.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-6 rounded-xl bg-white/5 backdrop-blur border border-white/10">
                 <DoorOpen className="h-8 w-8 text-accent mx-auto mb-4" />
-                <div className="text-accent font-bold text-xl mb-2">1. Gate</div>
+                <div className="text-accent font-bold text-xl mb-2">{t('checkpointGate')}</div>
                 <p className="text-sm opacity-60">Initial guest verification</p>
               </div>
               <div className="p-6 rounded-xl bg-white/5 backdrop-blur border border-white/10">
                 <GlassWater className="h-8 w-8 text-accent mx-auto mb-4" />
-                <div className="text-accent font-bold text-xl mb-2">2. Drinks</div>
+                <div className="text-accent font-bold text-xl mb-2">{t('checkpointDrinks')}</div>
                 <p className="text-sm opacity-60">Refreshment access control</p>
               </div>
               <div className="p-6 rounded-xl bg-white/5 backdrop-blur border border-white/10">
                 <Utensils className="h-8 w-8 text-accent mx-auto mb-4" />
-                <div className="text-accent font-bold text-xl mb-2">3. Food</div>
+                <div className="text-accent font-bold text-xl mb-2">{t('checkpointFood')}</div>
                 <p className="text-sm opacity-60">Catering verification</p>
               </div>
             </div>
