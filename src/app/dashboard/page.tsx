@@ -206,11 +206,13 @@ export default function Dashboard() {
 
     try {
       const categories = Array.from(new Set(mockData.map(item => item.category)));
-      const categoryTotals: Record<string, number> = {};
       const categoryScans: Record<string, any> = {};
 
       mockData.forEach(item => {
-        categoryTotals[item.category] = (categoryTotals[item.category] || 0) + 1;
+        if (!categoryScans[item.category]) {
+          categoryScans[item.category] = { gate: 0, drinks: 0, food: 0, total: 0 };
+        }
+        categoryScans[item.category].total++;
       });
 
       const batch = writeBatch(db);
@@ -221,7 +223,6 @@ export default function Dashboard() {
         const scanFood = mode === "finished" ? isScanned && Math.random() > 0.4 : false;
 
         if (isScanned) {
-          if (!categoryScans[item.category]) categoryScans[item.category] = { gate: 0, drinks: 0, food: 0 };
           categoryScans[item.category].gate++;
           if (scanDrinks) categoryScans[item.category].drinks++;
           if (scanFood) categoryScans[item.category].food++;
@@ -244,17 +245,19 @@ export default function Dashboard() {
 
       const statsUpdate: any = {
         categories: arrayUnion(...categories),
-        invitedTotals: categoryScans // Using Scans for invitedTotals update is technically wrong in original code, fixing logic here
       };
 
-      // Correct invited totals merging
       const newInvitedTotals = { ...(activeEvent.invitedTotals || {}) };
+      
       categories.forEach(cat => {
-        newInvitedTotals[cat] = (newInvitedTotals[cat] || 0) + categoryScans[cat]?.gate || 1; // Simplified for simulation
-        statsUpdate[`stats.${cat}.gate`] = (activeEvent.stats?.[cat]?.gate || 0) + (categoryScans[cat]?.gate || 0);
-        statsUpdate[`stats.${cat}.drinks`] = (activeEvent.stats?.[cat]?.drinks || 0) + (categoryScans[cat]?.drinks || 0);
-        statsUpdate[`stats.${cat}.food`] = (activeEvent.stats?.[cat]?.food || 0) + (categoryScans[cat]?.food || 0);
+        newInvitedTotals[cat] = (newInvitedTotals[cat] || 0) + (categoryScans[cat]?.total || 0);
+        
+        const existingStats = activeEvent.stats?.[cat] || { gate: 0, drinks: 0, food: 0 };
+        statsUpdate[`stats.${cat}.gate`] = (existingStats.gate || 0) + (categoryScans[cat]?.gate || 0);
+        statsUpdate[`stats.${cat}.drinks`] = (existingStats.drinks || 0) + (categoryScans[cat]?.drinks || 0);
+        statsUpdate[`stats.${cat}.food`] = (existingStats.food || 0) + (categoryScans[cat]?.food || 0);
       });
+      
       statsUpdate.invitedTotals = newInvitedTotals;
 
       batch.update(doc(db, "events", eventId), statsUpdate);
