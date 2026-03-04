@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Users, Calendar, QrCode, Loader2, Plus, GlassWater, Utensils, DoorOpen, UserPlus, Shield, FileSpreadsheet, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check, Info, ArrowRight, ShieldCheck, Mail } from "lucide-react";
+import { Users, Calendar, QrCode, Loader2, Plus, GlassWater, Utensils, DoorOpen, UserPlus, Shield, FileSpreadsheet, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check, Info, ArrowRight, ShieldCheck, Mail, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc } from "@/firebase";
@@ -19,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { sendEmailVerification } from "firebase/auth";
 
 type PackageType = "Free" | "Premium";
 type CreationStage = "plans" | "payment" | "details";
@@ -47,6 +49,7 @@ export default function Dashboard() {
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [reportGuests, setReportGuests] = useState<any[]>([]);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
   
   // Creation Wizard State
   const [creationStage, setCreationStage] = useState<CreationStage>("plans");
@@ -210,6 +213,19 @@ export default function Dashboard() {
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!user) return;
+    setIsResendingEmail(true);
+    try {
+      await sendEmailVerification(user);
+      toast({ title: "Email Sent", description: "Verification link resent successfully." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Send Failed", description: e.message });
+    } finally {
+      setIsResendingEmail(false);
+    }
+  };
+
   const openEditDialog = (e: any) => {
     setEditEventName(e.nameEn);
     setEditPosterUrl(e.posterUrl || "");
@@ -348,7 +364,7 @@ export default function Dashboard() {
               <div className="p-6 bg-muted/30 rounded-2xl border border-dashed border-muted-foreground/20 space-y-4">
                 <div className="flex items-center gap-4 text-left">
                   <ShieldCheck className="h-8 w-8 text-accent shrink-0" />
-                  <p className="text-sm italic opacity-70 italic">
+                  <p className="text-sm italic opacity-70">
                     "At 360 Digital, your security and event integrity are our highest priority. This verification ensures your administrative access remains exclusive."
                   </p>
                 </div>
@@ -362,7 +378,9 @@ export default function Dashboard() {
               <Button onClick={() => window.location.reload()} className="w-full h-14 text-lg bg-primary hover:bg-primary/90 text-white font-bold shadow-lg">
                 I've Verified My Email
               </Button>
-              <p className="text-[10px] text-center text-muted-foreground">Didn't see it? Check your spam folder or wait 2 minutes.</p>
+              <Button variant="ghost" onClick={handleResendVerification} disabled={isResendingEmail} className="text-xs text-muted-foreground hover:text-accent">
+                {isResendingEmail ? "Resending..." : "Didn't receive? Resend Verification Link"}
+              </Button>
             </CardFooter>
           </Card>
         </div>
@@ -383,7 +401,12 @@ export default function Dashboard() {
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="font-headline text-3xl font-bold text-primary">{t('dashboard')}</h1>
-              <p className="text-muted-foreground">Premium Event Registry &bull; {userProfile?.firstName} {userProfile?.lastName}</p>
+              <div className="flex items-center gap-3 mt-1">
+                <p className="text-muted-foreground text-sm">{userProfile?.firstName} {userProfile?.lastName}</p>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[10px] font-bold border border-green-200">
+                  <ShieldCheck className="h-3 w-3" /> VERIFIED ACCOUNT
+                </div>
+              </div>
             </div>
             <div className="flex gap-2">
               <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (open) resetWizard(); }}>
@@ -515,7 +538,16 @@ export default function Dashboard() {
             <StatStat icon={<Calendar className="h-5 w-5" />} title={t('events')} value={events?.length.toString() || "0"} label="Total Created" />
             <StatStat icon={<Sparkles className="h-5 w-5" />} title="Digital Invites" value={currentGuestCount.toString()} label="Invitations Ready" />
             <StatStat icon={<Users className="h-5 w-5" />} title="Total Capacity" value={events?.reduce((acc, e) => acc + (e.guestLimit || 0), 0).toString() || "0"} label="Registered Scale" />
-            <StatStat icon={<ShieldCheck className="h-5 w-5" />} title="Security Status" value={hasActivePremium ? "PREMIUM" : "STANDARD"} label={hasActivePremium ? "Unlimited Access" : "Trial Active"} />
+            {hasActivePremium ? (
+              <StatStat 
+                icon={<ShieldCheck className="h-5 w-5" />} 
+                title="Premium Access" 
+                value="ACTIVE" 
+                label={`Expires: ${new Date(userProfile?.subscription?.expiryDate).toLocaleDateString()}`} 
+              />
+            ) : (
+              <StatStat icon={<Info className="h-5 w-5" />} title="Account Plan" value="FREE TRIAL" label="One-time offer" />
+            )}
           </div>
 
           {events && events.length > 0 && (
