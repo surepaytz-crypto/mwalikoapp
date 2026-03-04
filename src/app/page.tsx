@@ -16,25 +16,27 @@ export default function Home() {
       <Navbar />
       
       <main className="flex-1">
-        {/* Hero Section with Video */}
-        <section className="relative h-[85vh] w-full overflow-hidden">
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="absolute inset-0 h-full w-full object-cover brightness-50"
-          >
-            <source src="https://assets.mixkit.co/videos/preview/mixkit-people-walking-in-a-busy-street-4428-large.mp4" type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
+        {/* Hero Section with Illustration */}
+        <section className="relative h-[85vh] w-full overflow-hidden bg-primary">
+          {/* Background Illustration */}
+          <div className="absolute inset-0 opacity-40">
+             <Image 
+                src="https://picsum.photos/seed/mwaliko-elegance/1920/1080"
+                alt="Luxury Event Backdrop"
+                fill
+                priority
+                className="object-cover"
+                data-ai-hint="luxury illustration"
+             />
+             <div className="absolute inset-0 bg-gradient-to-b from-primary/60 to-primary/20"></div>
+          </div>
           
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="container px-4 text-center text-white z-10">
-              <h1 className="mb-6 font-headline text-5xl font-bold tracking-tight md:text-7xl">
+              <h1 className="mb-6 font-headline text-5xl font-bold tracking-tight md:text-7xl drop-shadow-lg">
                 {t('tagline')}
               </h1>
-              <p className="mx-auto mb-10 max-w-2xl text-lg font-light md:text-xl text-white/80">
+              <p className="mx-auto mb-10 max-w-2xl text-lg font-light md:text-xl text-white/90 drop-shadow">
                 {t('luxuryDescription')}
               </p>
               <div className="flex flex-col items-center justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
@@ -50,18 +52,6 @@ export default function Home() {
                 </Link>
               </div>
             </div>
-          </div>
-          
-          {/* Illustration Overlay */}
-          <div className="absolute bottom-0 right-0 p-8 hidden lg:block opacity-40 hover:opacity-100 transition-opacity">
-            <Image 
-              src="https://picsum.photos/seed/event-illust/600/400" 
-              alt="Event Illustration" 
-              width={400} 
-              height={260} 
-              className="rounded-2xl border-4 border-accent shadow-2xl"
-              data-ai-hint="event illustration"
-            />
           </div>
         </section>
 
