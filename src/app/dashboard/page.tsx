@@ -86,14 +86,11 @@ export default function Dashboard() {
         startDate: new Date(Date.now() + 86400000 * 30).toISOString(),
         venue: "Venue TBD",
         guestCapacity: parseInt(eventCapacity),
-        categories: ["VIP", "Standard"],
+        categories: [], // Categories start empty as requested
         isActive: true,
         eventAdminId: user.uid,
         posterUrl: eventPoster || "https://picsum.photos/seed/mwaliko-poster/400/600",
-        stats: {
-          VIP: { gate: 0, drinks: 0, food: 0 },
-          Standard: { gate: 0, drinks: 0, food: 0 }
-        }
+        stats: {} // Stats start empty
       };
       const docRef = await addDoc(collection(db, "events"), newEvent);
       setActiveEventId(docRef.id);
@@ -147,16 +144,10 @@ export default function Dashboard() {
       startDate: new Date(Date.now() + 86400000 * 30).toISOString(), 
       venue: "Mlimani City Hall, Dar es Salaam",
       guestCapacity: 1000,
-      categories: ["VVIP", "VIP", "Family", "Friends", "Press"],
+      categories: [], // Start empty, will be populated by "CSV import" simulation
       isActive: true,
       eventAdminId: user.uid,
-      stats: {
-        VVIP: { gate: 0, drinks: 0, food: 0 },
-        VIP: { gate: 0, drinks: 0, food: 0 },
-        Family: { gate: 0, drinks: 0, food: 0 },
-        Friends: { gate: 0, drinks: 0, food: 0 },
-        Press: { gate: 0, drinks: 0, food: 0 }
-      }
+      stats: {}
     });
     toast({ title: "Demo Event Created", description: "Harusi ya Pima na Jenifa is now active." });
   };
@@ -175,7 +166,28 @@ export default function Dashboard() {
     ];
 
     try {
+      // 1. Detect unique categories from the imported data
+      const importedCategories = Array.from(new Set(mockData.map(item => item.category)));
+      
       const batch = writeBatch(db);
+      const eventDocRef = doc(db, "events", eventId);
+
+      // 2. Prepare the category and stats update
+      // We use arrayUnion to add only new categories
+      const statsUpdate: any = {
+        categories: arrayUnion(...importedCategories)
+      };
+
+      // Initialize stats for each detected category (if not already there)
+      importedCategories.forEach(cat => {
+        statsUpdate[`stats.${cat}.gate`] = 0;
+        statsUpdate[`stats.${cat}.drinks`] = 0;
+        statsUpdate[`stats.${cat}.food`] = 0;
+      });
+
+      batch.update(eventDocRef, statsUpdate);
+
+      // 3. Create guest records
       mockData.forEach((item) => {
         const guestRef = doc(collection(db, "events", eventId, "guestEvents"));
         batch.set(guestRef, {
@@ -190,8 +202,9 @@ export default function Dashboard() {
           createdAt: new Date().toISOString()
         });
       });
+
       await batch.commit();
-      toast({ title: "Import Successful", description: `${mockData.length} guests imported from CSV.` });
+      toast({ title: "Import Successful", description: `${mockData.length} guests imported. Categories detected: ${importedCategories.join(", ")}` });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Import Failed", description: e.message });
     } finally {
@@ -433,52 +446,36 @@ export default function Dashboard() {
               <TabsContent value="analytics" className="space-y-8">
                 <div className="flex items-center justify-between">
                    <h2 className="font-headline text-2xl font-bold">Registry Stats: {activeEvent.nameEn} ({activeEvent.shortId})</h2>
-                   <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="text-accent underline decoration-accent/30 underline-offset-4">
-                          <Settings className="mr-2 h-4 w-4" /> {t('manageCategories')}
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                         <DialogHeader>
-                           <DialogTitle>{t('manageCategories')}</DialogTitle>
-                           <DialogDescription>Define your guest tiers for precise tracking.</DialogDescription>
-                         </DialogHeader>
-                         <div className="space-y-4 py-4">
-                            <div className="flex flex-wrap gap-2">
-                               {activeEvent.categories?.map((c: string) => (
-                                 <div key={c} className="px-2 py-1 bg-accent/10 border border-accent/20 rounded text-xs font-bold text-accent">{c}</div>
-                               ))}
-                            </div>
-                            <div className="flex gap-2">
-                               <Input placeholder={t('categoryName')} />
-                               <Button onClick={() => toast({ title: "Feature coming", description: "Category management refined." })}>{t('addCategory')}</Button>
-                            </div>
-                         </div>
-                      </DialogContent>
-                   </Dialog>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <CategoryScanCard 
-                    icon={<DoorOpen className="h-5 w-5 text-accent" />} 
-                    title={t('checkpointGate')} 
-                    event={activeEvent}
-                    checkpoint="gate"
-                  />
-                  <CategoryScanCard 
-                    icon={<GlassWater className="h-5 w-5 text-accent" />} 
-                    title={t('checkpointDrinks')} 
-                    event={activeEvent}
-                    checkpoint="drinks"
-                  />
-                  <CategoryScanCard 
-                    icon={<Utensils className="h-5 w-5 text-accent" />} 
-                    title={t('checkpointFood')} 
-                    event={activeEvent}
-                    checkpoint="food"
-                  />
-                </div>
+                {(!activeEvent.categories || activeEvent.categories.length === 0) ? (
+                  <Card className="p-12 text-center border-dashed">
+                    <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-xl font-bold mb-2">No Categories Detected</h3>
+                    <p className="text-muted-foreground">Import your guest list via CSV to automatically detect and display categories.</p>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <CategoryScanCard 
+                      icon={<DoorOpen className="h-5 w-5 text-accent" />} 
+                      title={t('checkpointGate')} 
+                      event={activeEvent}
+                      checkpoint="gate"
+                    />
+                    <CategoryScanCard 
+                      icon={<GlassWater className="h-5 w-5 text-accent" />} 
+                      title={t('checkpointDrinks')} 
+                      event={activeEvent}
+                      checkpoint="drinks"
+                    />
+                    <CategoryScanCard 
+                      icon={<Utensils className="h-5 w-5 text-accent" />} 
+                      title={t('checkpointFood')} 
+                      event={activeEvent}
+                      checkpoint="food"
+                    />
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="staff">
@@ -572,7 +569,7 @@ export default function Dashboard() {
 }
 
 function CategoryScanCard({ icon, title, event, checkpoint }: { icon: React.ReactNode, title: string, event: any, checkpoint: string }) {
-  const categories = event.categories || ["VIP", "Standard"];
+  const categories = event.categories || [];
   const totalPossible = event.guestCapacity || 100;
   const totalScanned = categories.reduce((acc: number, cat: string) => acc + (event.stats?.[cat]?.[checkpoint] || 0), 0);
   const percentage = totalPossible > 0 ? (totalScanned / totalPossible) * 100 : 0;
