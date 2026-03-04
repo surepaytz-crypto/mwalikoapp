@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check, Info, ArrowRight, ShieldCheck, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -34,7 +33,7 @@ interface PlanConfig {
 
 const PLANS: PlanConfig[] = [
   { type: "Free", limit: 200, price: "0 TZS", duration: "1 Month", name: "Free Trial" },
-  { type: "Premium", limit: 999999, price: "350,000 TZS", duration: "2 Months", name: "Premium Package" },
+  { type: "Premium", limit: 999999, price: "100,000 TZS", duration: "3 Months", name: "Premium Package" },
 ];
 
 export default function Dashboard() {
@@ -125,7 +124,7 @@ export default function Dashboard() {
       return;
     }
 
-    if (selectedPlan === "Premium") {
+    if (selectedPlan === "Premium" && !hasActivePremium) {
       setCreationStage("payment");
     } else {
       setCreationStage("details");
@@ -140,7 +139,7 @@ export default function Dashboard() {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       const expiry = new Date();
-      expiry.setMonth(expiry.getMonth() + 2);
+      expiry.setMonth(expiry.getMonth() + 3);
 
       await updateDoc(doc(db, "users", user.uid), {
         subscription: {
@@ -151,7 +150,7 @@ export default function Dashboard() {
       });
       
       setCreationStage("details");
-      toast({ title: "Payment Verified", description: "You now have 2 months of unlimited Premium access!" });
+      toast({ title: "Payment Verified", description: "You now have 3 months of unlimited Premium access!" });
     } finally {
       setIsProcessingPayment(false);
     }
@@ -468,19 +467,19 @@ export default function Dashboard() {
                       <DialogHeader>
                         <DialogTitle>Verify Payment Access</DialogTitle>
                         <DialogDescription>
-                          Complete activation for your <strong>Premium Package</strong> (350,000 TZS).
+                          Complete activation for your <strong>Premium Package</strong> (100,000 TZS).
                         </DialogDescription>
                       </DialogHeader>
                       <div className="bg-muted/50 p-6 rounded-2xl border text-left space-y-4">
                         <div className="flex justify-between items-center pb-2 border-b">
                            <span className="text-sm font-medium">Total Due</span>
-                           <span className="text-xl font-bold text-accent">350,000 TZS</span>
+                           <span className="text-xl font-bold text-accent">100,000 TZS</span>
                         </div>
                         <div className="space-y-2">
                            <Label className="text-xs opacity-60">Payment Reference</Label>
                            <div className="p-3 bg-white rounded-lg border font-mono text-xs text-center tracking-widest">MW-{Math.random().toString(36).substring(7).toUpperCase()}</div>
                         </div>
-                        <p className="text-[10px] text-muted-foreground italic text-center">Once verified, you will have unlimited registry access for 2 months.</p>
+                        <p className="text-[10px] text-muted-foreground italic text-center">Once verified, you will have unlimited registry access for 3 months.</p>
                       </div>
                       <div className="flex gap-3">
                          <Button variant="outline" className="flex-1" onClick={() => setCreationStage("plans")}>Go Back</Button>
