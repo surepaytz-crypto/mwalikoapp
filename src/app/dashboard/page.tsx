@@ -4,7 +4,7 @@
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon } from "lucide-react";
+import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
@@ -13,11 +13,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -34,6 +36,12 @@ export default function Dashboard() {
   const [eventCapacity, setEventCapacity] = useState("500");
   const [eventPoster, setEventPoster] = useState<string | null>(null);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+
+  // Edit Event Form State
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editEventName, setEditEventName] = useState("");
+  const [editEventCapacity, setEditEventCapacity] = useState("");
+  const [isUpdatingEvent, setIsUpdatingEvent] = useState(false);
 
   // Staff form state
   const [staffUsername, setStaffUsername] = useState("");
@@ -94,6 +102,39 @@ export default function Dashboard() {
     } finally {
       setIsCreatingEvent(false);
     }
+  };
+
+  const handleUpdateEvent = async () => {
+    if (!db || !activeEventId || !editEventName) return;
+    setIsUpdatingEvent(true);
+    try {
+      await updateDoc(doc(db, "events", activeEventId), {
+        nameEn: editEventName,
+        nameSw: editEventName,
+        guestCapacity: parseInt(editEventCapacity)
+      });
+      setIsEditDialogOpen(false);
+      toast({ title: "Event Updated", description: "Changes have been saved successfully." });
+    } finally {
+      setIsUpdatingEvent(false);
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!db || !activeEventId) return;
+    try {
+      await deleteDoc(doc(db, "events", activeEventId));
+      setActiveEventId(null);
+      toast({ title: "Event Deleted", description: "The event has been removed." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Delete Failed", description: e.message });
+    }
+  };
+
+  const openEditDialog = (e: any) => {
+    setEditEventName(e.nameEn);
+    setEditEventCapacity(e.guestCapacity.toString());
+    setIsEditDialogOpen(true);
   };
 
   const handleCreateDemoEvent = () => {
@@ -244,7 +285,7 @@ export default function Dashboard() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            {!events || events.length === 0 && (
+            {(!events || events.length === 0) && (
               <Button variant="outline" onClick={handleCreateDemoEvent} className="border-accent text-accent">
                 {t('createDemo')}
               </Button>
@@ -264,194 +305,266 @@ export default function Dashboard() {
             <Label className="text-xs font-bold uppercase tracking-widest opacity-50 mb-2 block">{t('selectEvent')}</Label>
             <div className="flex flex-wrap gap-2">
               {events.map((e) => (
-                <Button 
-                  key={e.id} 
-                  variant={activeEventId === e.id ? "default" : "outline"}
+                <div 
+                  key={e.id}
+                  className={cn(
+                    "flex items-center gap-3 rounded-full px-4 py-2 transition-all cursor-pointer border",
+                    activeEventId === e.id 
+                      ? "bg-primary text-primary-foreground shadow-lg border-primary" 
+                      : "bg-background text-foreground border-input hover:bg-accent/10"
+                  )}
                   onClick={() => setActiveEventId(e.id)}
-                  className="rounded-full px-6"
                 >
-                  {e.shortId} &bull; {e.nameEn}
-                </Button>
+                  <span className="text-sm font-bold whitespace-nowrap">
+                    {e.shortId} &bull; {e.nameEn}
+                  </span>
+                  {activeEventId === e.id && (
+                    <div className="flex items-center gap-1 border-l border-white/20 pl-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 rounded-full hover:bg-white/20 text-white p-0"
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          openEditDialog(e);
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 rounded-full hover:bg-red-500/50 text-white p-0"
+                            onClick={(ev) => ev.stopPropagation()}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent onClick={(ev) => ev.stopPropagation()}>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete the event "{e.nameEn}" and all its guest data.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteEvent} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>
         )}
 
         {activeEvent && (
-          <Tabs defaultValue="analytics" className="mt-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-               <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
-                <TabsTrigger value="analytics">Live Analytics</TabsTrigger>
-                <TabsTrigger value="staff">Staff Access</TabsTrigger>
-              </TabsList>
-              
-              <div className="flex gap-2">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="border-accent text-accent">
-                      <FileSpreadsheet className="mr-2 h-4 w-4" /> {t('importGuests')}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>{t('uploadCsv')}</DialogTitle>
-                      <DialogDescription>{t('importFormat')}</DialogDescription>
-                    </DialogHeader>
-                    <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed rounded-lg border-muted-foreground/20 bg-muted/5">
-                      <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                      <Button onClick={() => handleCsvSimulation(activeEvent.id)} disabled={isUploading}>
-                        {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('processing')}</> : "Simulate CSV Import"}
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-                <Link href={`/events/${activeEvent.id}/scan`}>
-                   <Button className="bg-primary text-primary-foreground">
-                      <QrCode className="mr-2 h-4 w-4" /> Go to Scanner
-                   </Button>
-                </Link>
-                <Link href={`/events/${activeEvent.id}/invite`}>
-                   <Button variant="outline">
-                      {t('generateInvite')}
-                   </Button>
-                </Link>
-              </div>
-            </div>
-            
-            <TabsContent value="analytics" className="space-y-8">
-              <div className="flex items-center justify-between">
-                 <h2 className="font-headline text-2xl font-bold">Registry Stats: {activeEvent.nameEn} ({activeEvent.shortId})</h2>
-                 <Dialog>
+          <>
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Edit Event</DialogTitle>
+                  <DialogDescription>Update your event details.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-name">{t('eventName')}</Label>
+                    <Input id="edit-name" value={editEventName} onChange={(e) => setEditEventName(e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-capacity">{t('capacity')}</Label>
+                    <Input id="edit-capacity" type="number" value={editEventCapacity} onChange={(e) => setEditEventCapacity(e.target.value)} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleUpdateEvent} disabled={isUpdatingEvent || !editEventName}>
+                    {isUpdatingEvent ? <Loader2 className="animate-spin" /> : t('save')}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Tabs defaultValue="analytics" className="mt-8">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                 <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+                  <TabsTrigger value="analytics">Live Analytics</TabsTrigger>
+                  <TabsTrigger value="staff">Staff Access</TabsTrigger>
+                </TabsList>
+                
+                <div className="flex gap-2">
+                  <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-accent underline decoration-accent/30 underline-offset-4">
-                        <Settings className="mr-2 h-4 w-4" /> {t('manageCategories')}
+                      <Button variant="outline" className="border-accent text-accent">
+                        <FileSpreadsheet className="mr-2 h-4 w-4" /> {t('importGuests')}
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
-                       <DialogHeader>
-                         <DialogTitle>{t('manageCategories')}</DialogTitle>
-                         <DialogDescription>Define your guest tiers for precise tracking.</DialogDescription>
-                       </DialogHeader>
-                       <div className="space-y-4 py-4">
-                          <div className="flex flex-wrap gap-2">
-                             {activeEvent.categories?.map((c: string) => (
-                               <div key={c} className="px-2 py-1 bg-accent/10 border border-accent/20 rounded text-xs font-bold text-accent">{c}</div>
-                             ))}
-                          </div>
-                          <div className="flex gap-2">
-                             <Input placeholder={t('categoryName')} />
-                             <Button onClick={() => toast({ title: "Feature coming", description: "Category management refined." })}>{t('addCategory')}</Button>
-                          </div>
-                       </div>
+                      <DialogHeader>
+                        <DialogTitle>{t('uploadCsv')}</DialogTitle>
+                        <DialogDescription>{t('importFormat')}</DialogDescription>
+                      </DialogHeader>
+                      <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed rounded-lg border-muted-foreground/20 bg-muted/5">
+                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                        <Button onClick={() => handleCsvSimulation(activeEvent.id)} disabled={isUploading}>
+                          {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('processing')}</> : "Simulate CSV Import"}
+                        </Button>
+                      </div>
                     </DialogContent>
-                 </Dialog>
+                  </Dialog>
+                  <Link href={`/events/${activeEvent.id}/scan`}>
+                     <Button className="bg-primary text-primary-foreground">
+                        <QrCode className="mr-2 h-4 w-4" /> Go to Scanner
+                     </Button>
+                  </Link>
+                  <Link href={`/events/${activeEvent.id}/invite`}>
+                     <Button variant="outline">
+                        {t('generateInvite')}
+                     </Button>
+                  </Link>
+                </div>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <CategoryScanCard 
-                  icon={<DoorOpen className="h-5 w-5 text-accent" />} 
-                  title={t('checkpointGate')} 
-                  event={activeEvent}
-                  checkpoint="gate"
-                />
-                <CategoryScanCard 
-                  icon={<GlassWater className="h-5 w-5 text-accent" />} 
-                  title={t('checkpointDrinks')} 
-                  event={activeEvent}
-                  checkpoint="drinks"
-                />
-                <CategoryScanCard 
-                  icon={<Utensils className="h-5 w-5 text-accent" />} 
-                  title={t('checkpointFood')} 
-                  event={activeEvent}
-                  checkpoint="food"
-                />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="staff">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <Card className="lg:col-span-1 border-none shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <UserPlus className="h-5 w-5 text-accent" />
-                      Pin Security Staff
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>{t('selectEvent')}</Label>
-                      <Select value={selectedEventForStaff} onValueChange={setSelectedEventForStaff}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pick Event" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {events?.map((e) => (
-                            <SelectItem key={e.id} value={e.id}>{e.shortId} &bull; {e.nameEn}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>{t('staffUsername')}</Label>
-                      <Input value={staffUsername} onChange={(e) => setStaffUsername(e.target.value)} placeholder="e.g. juma_gate" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>{t('staffPassword')}</Label>
-                      <Input type="password" value={staffPassword} onChange={(e) => setStaffPassword(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>{t('assignedCheckpoint')}</Label>
-                      <Select value={staffCheckpoint} onValueChange={(v: any) => setStaffCheckpoint(v)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="GATE">{t('checkpointGate')}</SelectItem>
-                          <SelectItem value="DRINKS">{t('checkpointDrinks')}</SelectItem>
-                          <SelectItem value="FOOD">{t('checkpointFood')}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button className="w-full bg-accent text-accent-foreground" onClick={handleAddStaff}>
-                      Save Staff Member
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card className="lg:col-span-2 border-none shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Assigned Team for {activeEvent.nameEn}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {staffList?.map((staff) => (
-                        <div key={staff.id} className="flex items-center justify-between p-4 bg-muted/20 rounded-lg border">
-                          <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 bg-accent/10 rounded-full flex items-center justify-center">
-                              <Shield className="h-5 w-5 text-accent" />
+              
+              <TabsContent value="analytics" className="space-y-8">
+                <div className="flex items-center justify-between">
+                   <h2 className="font-headline text-2xl font-bold">Registry Stats: {activeEvent.nameEn} ({activeEvent.shortId})</h2>
+                   <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm" className="text-accent underline decoration-accent/30 underline-offset-4">
+                          <Settings className="mr-2 h-4 w-4" /> {t('manageCategories')}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                         <DialogHeader>
+                           <DialogTitle>{t('manageCategories')}</DialogTitle>
+                           <DialogDescription>Define your guest tiers for precise tracking.</DialogDescription>
+                         </DialogHeader>
+                         <div className="space-y-4 py-4">
+                            <div className="flex flex-wrap gap-2">
+                               {activeEvent.categories?.map((c: string) => (
+                                 <div key={c} className="px-2 py-1 bg-accent/10 border border-accent/20 rounded text-xs font-bold text-accent">{c}</div>
+                               ))}
                             </div>
-                            <div>
-                              <p className="font-bold">{staff.username}</p>
-                              <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">
-                                {staff.assignedCheckpoint} &bull; PINNED TO EVENT
-                              </p>
+                            <div className="flex gap-2">
+                               <Input placeholder={t('categoryName')} />
+                               <Button onClick={() => toast({ title: "Feature coming", description: "Category management refined." })}>{t('addCategory')}</Button>
                             </div>
+                         </div>
+                      </DialogContent>
+                   </Dialog>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <CategoryScanCard 
+                    icon={<DoorOpen className="h-5 w-5 text-accent" />} 
+                    title={t('checkpointGate')} 
+                    event={activeEvent}
+                    checkpoint="gate"
+                  />
+                  <CategoryScanCard 
+                    icon={<GlassWater className="h-5 w-5 text-accent" />} 
+                    title={t('checkpointDrinks')} 
+                    event={activeEvent}
+                    checkpoint="drinks"
+                  />
+                  <CategoryScanCard 
+                    icon={<Utensils className="h-5 w-5 text-accent" />} 
+                    title={t('checkpointFood')} 
+                    event={activeEvent}
+                    checkpoint="food"
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="staff">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <Card className="lg:col-span-1 border-none shadow-sm">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <UserPlus className="h-5 w-5 text-accent" />
+                        Pin Security Staff
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>{t('selectEvent')}</Label>
+                        <Select value={selectedEventForStaff} onValueChange={setSelectedEventForStaff}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pick Event" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {events?.map((e) => (
+                              <SelectItem key={e.id} value={e.id}>{e.shortId} &bull; {e.nameEn}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t('staffUsername')}</Label>
+                        <Input value={staffUsername} onChange={(e) => setStaffUsername(e.target.value)} placeholder="e.g. juma_gate" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t('staffPassword')}</Label>
+                        <Input type="password" value={staffPassword} onChange={(e) => setStaffPassword(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t('assignedCheckpoint')}</Label>
+                        <Select value={staffCheckpoint} onValueChange={(v: any) => setStaffCheckpoint(v)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="GATE">{t('checkpointGate')}</SelectItem>
+                            <SelectItem value="DRINKS">{t('checkpointDrinks')}</SelectItem>
+                            <SelectItem value="FOOD">{t('checkpointFood')}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button className="w-full bg-accent text-accent-foreground" onClick={handleAddStaff}>
+                        Save Staff Member
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="lg:col-span-2 border-none shadow-sm">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Assigned Team for {activeEvent.nameEn}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {staffList?.map((staff) => (
+                          <div key={staff.id} className="flex items-center justify-between p-4 bg-muted/20 rounded-lg border">
+                            <div className="flex items-center gap-4">
+                              <div className="h-10 w-10 bg-accent/10 rounded-full flex items-center justify-center">
+                                <Shield className="h-5 w-5 text-accent" />
+                              </div>
+                              <div>
+                                <p className="font-bold">{staff.username}</p>
+                                <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">
+                                  {staff.assignedCheckpoint} &bull; PINNED TO EVENT
+                                </p>
+                              </div>
+                            </div>
+                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteStaff(staff.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteStaff(staff.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                      {(!staffList || staffList.length === 0) && (
-                        <p className="text-center py-8 text-muted-foreground italic">No staff pinned to this event yet.</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          </Tabs>
+                        ))}
+                        {(!staffList || staffList.length === 0) && (
+                          <p className="text-center py-8 text-muted-foreground italic">No staff pinned to this event yet.</p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </>
         )}
       </main>
     </div>
