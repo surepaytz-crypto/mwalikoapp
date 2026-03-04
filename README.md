@@ -1,47 +1,43 @@
-# Mwaliko App - Premium Event Invitations
+# Mwaliko App - Premium Event Invitations & Security
 
-This is a luxurious event management and guest invitation platform built with Next.js, Tailwind CSS, and Genkit AI, designed for deployment on Firebase.
+Mwaliko is a luxurious event management platform designed for high-end weddings, galas, and corporate events. It combines elegant AI-powered invitations with a robust 3-point security scanning system.
 
-## 🛠 How to Edit
+## 🌟 Core Features
 
-This project is designed to be developed collaboratively with your AI partner in Firebase Studio.
+### 1. Administrative Dashboard
+- **Auto-Generated Ticket IDs**: Import a guest list via CSV; the system automatically generates unique 5-character secure IDs.
+- **3-Point Logic**: Track guest attendance across three distinct checkpoints: **Gate, Drinks, and Food**.
+- **Real-time Analytics**: Monitor "Scanned vs. Invited" (X/Y) statistics for every category (VIP, Standard, etc.).
+- **High-End Reporting**: Generate professional, print-ready PDF reports with color-coded attendance lists.
 
-- **Request Features:** Simply ask the AI to "Add a guest list," "Create a login page," or "Update the styling."
-- **AI Guidance:** The AI will generate the necessary code changes across multiple files and present them for your approval.
-- **Manual Edits:** You can also manually edit files in the editor if you prefer fine-grained control.
+### 2. Invitation Center
+- **10 Premium Templates**: Choose from elegant floral, royal gold, and traditional African-inspired designs.
+- **AI Card Generation**: Uses Google Gemini to render high-resolution invitation images with integrated QR codes.
+- **Live Inline Editor**: Modify event details, host names, and RSVP text with an instant live preview.
+- **Omnichannel Sharing**: Personalized Swahili/English WhatsApp messages with bundled invitation images.
 
-## 🚀 How to Publish
+### 3. Scanner Staff Portal
+- **Role-Based Access**: Staff accounts land directly on the scanner interface for speed and focus.
+- **Real-Time QR Verification**: High-performance scanning using `jsQR` for instant "Valid/Invalid" feedback.
+- **Conflict Prevention**: Automatically detects and blocks "Already Used" tickets at specific checkpoints.
 
-Your app is pre-configured for **Firebase App Hosting**, which provides a seamless path from code to a live production URL.
+## 🛠 Tech Stack
 
-### 1. Push to GitHub
-Ensure your latest changes are pushed to a GitHub repository.
+- **Framework**: Next.js 15 (App Router)
+- **Styling**: Tailwind CSS + ShadCN UI
+- **AI**: Genkit (Google Gemini 2.5 Flash)
+- **Backend**: Firebase (Auth, Firestore, Hosting)
+- **Scanning**: jsQR for real-time video analysis
+- **Icons**: Lucide React
 
-### 2. Set up App Hosting in Firebase
-1.  Go to the [Firebase Console](https://console.firebase.google.com/).
-2.  Select your project.
-3.  In the left sidebar, click on **Build** > **App Hosting**.
-4.  Click **Get Started** and follow the prompts to connect your GitHub account.
-5.  Select your repository and the branch you want to deploy (usually `main`).
+## 🚀 Getting Started
 
-### 3. Automatic Deployments
-Once connected, every time you push code to your branch, Firebase App Hosting will automatically:
-- Detect your Next.js project.
-- Install dependencies and build the application.
-- Deploy it to a globally distributed, secure web hosting environment.
+1. **Admin Login**: Log in as an Event Admin (or use the Demo Admin).
+2. **Setup Event**: Create an event and set your **Event Poster** URL.
+3. **Import Guests**: Upload a CSV with `No, Name, Category, Phone`.
+4. **Design Invitations**: Pick a template in the Invitation Center and customize the text.
+5. **Deploy Staff**: Create staff logins and assign them to Gate/Drinks/Food checkpoints.
+6. **Verify & Report**: Start scanning guests and download the final attendance report once the event ends.
 
-## 🏗 Tech Stack
-
-- **Framework:** Next.js 15 (App Router)
-- **Styling:** Tailwind CSS + ShadCN UI
-- **AI:** Genkit (Google Gemini)
-- **Backend:** Firebase (Auth, Firestore, App Hosting)
-- **Icons:** Lucide React
-
-## 📄 Project Structure
-
-- `src/app`: Next.js pages and layouts.
-- `src/components`: Reusable UI components.
-- `src/ai`: Genkit AI flows and prompts.
-- `src/context`: React context providers (e.g., Language/Translation).
-- `apphosting.yaml`: Configuration for Firebase App Hosting.
+## 📄 License
+Powered by 360 Digital. All rights reserved.
