@@ -1,45 +1,732 @@
 {
   "entities": {
-    "Event": {
-      "title": "Event",
-      "description": "Represents a luxury event managed within the app.",
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
       "type": "object",
+      "description": "Represents a user of the Mwaliko App, including event administrators, scanner staff, and reception officers. This entity assumes an external authentication system handles passwords and security credentials.",
       "properties": {
-        "name": { "type": "string", "description": "The name of the event." },
-        "type": { "type": "string", "description": "The category of the event (e.g., Wedding, Gala)." },
-        "date": { "type": "string", "format": "date", "description": "The scheduled date of the event." },
-        "venue": { "type": "string", "description": "The location of the event." },
-        "status": { "type": "string", "enum": ["Planning", "Ongoing", "Completed"], "description": "The current stage of the event." },
-        "guestCount": { "type": "number", "description": "Total number of invited guests." },
-        "scannedCount": { "type": "number", "description": "Number of guests who have checked in." }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address, used for communication and potentially login (via external auth).",
+          "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The user's phone number, primarily for contact."
+        },
+        "userRole": {
+          "type": "string",
+          "description": "The role of the user within the application, determining their access permissions (e.g., SuperAdmin, EventAdmin, ScannerStaff, ReceptionOfficer)."
+        }
       },
-      "required": ["name", "type", "date", "status"]
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "userRole"
+      ]
+    },
+    "Venue": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Venue",
+      "type": "object",
+      "description": "Details about a physical location where events can be held.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Venue entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the venue (e.g., 'Safari Park Hotel & Casino')."
+        },
+        "address": {
+          "type": "string",
+          "description": "The full postal address of the venue."
+        },
+        "capacity": {
+          "type": "number",
+          "description": "The maximum guest capacity of the venue, if applicable."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "address"
+      ]
+    },
+    "Event": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Event",
+      "type": "object",
+      "description": "Represents a single event managed within the Mwaliko App, including all its core details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Event entity."
+        },
+        "nameEn": {
+          "type": "string",
+          "description": "The name of the event in English."
+        },
+        "nameSw": {
+          "type": "string",
+          "description": "The name of the event in Swahili."
+        },
+        "descriptionEn": {
+          "type": "string",
+          "description": "A detailed description of the event in English."
+        },
+        "descriptionSw": {
+          "type": "string",
+          "description": "A detailed description of the event in Swahili."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type or category of the event (e.g., 'Conference', 'Wedding', 'Concert')."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "The date and time when the event is scheduled to start.",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "The date and time when the event is scheduled to end.",
+          "format": "date-time"
+        },
+        "venueId": {
+          "type": "string",
+          "description": "Reference to the Venue where the event will be held. (Relationship: Venue 1:N Event)"
+        },
+        "guestCapacity": {
+          "type": "number",
+          "description": "The maximum number of guests the event can accommodate."
+        },
+        "coverImageUrl": {
+          "type": "string",
+          "description": "URL to the cover image or banner for the event.",
+          "format": "uri"
+        },
+        "eventAdminId": {
+          "type": "string",
+          "description": "Reference to the User who is the primary administrator for this event. (Relationship: User 1:N Event)"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Indicates if the event is currently active or has been archived/cancelled."
+        }
+      },
+      "required": [
+        "id",
+        "nameEn",
+        "nameSw",
+        "type",
+        "startDate",
+        "endDate",
+        "venueId",
+        "guestCapacity",
+        "eventAdminId",
+        "isActive"
+      ]
+    },
+    "Checkpoint": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Checkpoint",
+      "type": "object",
+      "description": "Defines an entry phase or scanning point within an event.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Checkpoint entity."
+        },
+        "nameEn": {
+          "type": "string",
+          "description": "The name of the checkpoint in English (e.g., 'Main Entrance', 'VIP Lounge')."
+        },
+        "nameSw": {
+          "type": "string",
+          "description": "The name of the checkpoint in Swahili."
+        },
+        "descriptionEn": {
+          "type": "string",
+          "description": "A description of the checkpoint's purpose or location in English."
+        },
+        "descriptionSw": {
+          "type": "string",
+          "description": "A description of the checkpoint's purpose or location in Swahili."
+        },
+        "eventId": {
+          "type": "string",
+          "description": "Reference to the Event this checkpoint belongs to. (Relationship: Event 1:N Checkpoint)"
+        },
+        "order": {
+          "type": "number",
+          "description": "The sequential order of the checkpoint within the event's flow, if applicable."
+        }
+      },
+      "required": [
+        "id",
+        "nameEn",
+        "nameSw",
+        "eventId"
+      ]
     },
     "Guest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Guest",
-      "description": "Represents a guest invited to a specific event.",
       "type": "object",
+      "description": "Represents an individual person who can be invited to one or more events. This stores their core personal information.",
       "properties": {
-        "name": { "type": "string", "description": "The guest's full name." },
-        "email": { "type": "string", "format": "email", "description": "The guest's email address." },
-        "category": { "type": "string", "enum": ["VIP", "Standard", "Staff"], "description": "The guest's privilege level." },
-        "isScanned": { "type": "boolean", "description": "Whether the guest's QR code has been scanned." },
-        "scannedAt": { "type": "string", "format": "date-time", "description": "The timestamp of when the guest was checked in." }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Guest entity."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the guest."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the guest."
+        },
+        "email": {
+          "type": "string",
+          "description": "The guest's email address, used for invitations and communication.",
+          "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The guest's phone number, primarily for WhatsApp invitations."
+        }
       },
-      "required": ["name", "category", "isScanned"]
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "phoneNumber"
+      ]
+    },
+    "GuestCategory": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GuestCategory",
+      "type": "object",
+      "description": "Defines custom categories for guests within an event (e.g., VIP, Standard, Speaker).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the GuestCategory entity."
+        },
+        "nameEn": {
+          "type": "string",
+          "description": "The name of the guest category in English."
+        },
+        "nameSw": {
+          "type": "string",
+          "description": "The name of the guest category in Swahili."
+        },
+        "descriptionEn": {
+          "type": "string",
+          "description": "A description of the guest category in English."
+        },
+        "descriptionSw": {
+          "type": "string",
+          "description": "A description of the guest category in Swahili."
+        },
+        "eventId": {
+          "type": "string",
+          "description": "Optional reference to the Event this category is specific to. If null, it's a global category. (Relationship: Event 0-1:N GuestCategory)"
+        }
+      },
+      "required": [
+        "id",
+        "nameEn",
+        "nameSw"
+      ]
+    },
+    "InvitationTemplate": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "InvitationTemplate",
+      "type": "object",
+      "description": "Stores templates for AI-assisted invitation messages and card designs, supporting multi-language content.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the InvitationTemplate entity."
+        },
+        "nameEn": {
+          "type": "string",
+          "description": "A descriptive name for the template in English."
+        },
+        "nameSw": {
+          "type": "string",
+          "description": "A descriptive name for the template in Swahili."
+        },
+        "templateContentEn": {
+          "type": "string",
+          "description": "The main content of the invitation template (e.g., WhatsApp message text, HTML for email) in English."
+        },
+        "templateContentSw": {
+          "type": "string",
+          "description": "The main content of the invitation template in Swahili."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to an image associated with the template, such as a background image for an invitation card.",
+          "format": "uri"
+        },
+        "type": {
+          "type": "string",
+          "description": "The communication channel this template is designed for (e.g., 'WhatsApp', 'Email')."
+        },
+        "isDefault": {
+          "type": "boolean",
+          "description": "Indicates if this is a default template for its type."
+        },
+        "createdByUserId": {
+          "type": "string",
+          "description": "Reference to the User who created this template. (Relationship: User 1:N InvitationTemplate)"
+        }
+      },
+      "required": [
+        "id",
+        "nameEn",
+        "nameSw",
+        "templateContentEn",
+        "templateContentSw",
+        "type",
+        "isDefault",
+        "createdByUserId"
+      ]
+    },
+    "GuestEvent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GuestEvent",
+      "type": "object",
+      "description": "Represents a specific guest's attendance record for a particular event. This is the junction entity for Guest and Event, holding event-specific guest details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the GuestEvent entity (linking a specific guest to a specific event)."
+        },
+        "guestId": {
+          "type": "string",
+          "description": "Reference to the Guest being invited or attending. (Relationship: Guest 1:N GuestEvent)"
+        },
+        "eventId": {
+          "type": "string",
+          "description": "Reference to the Event the guest is invited to or attending. (Relationship: Event 1:N GuestEvent)"
+        },
+        "qrCodeData": {
+          "type": "string",
+          "description": "The unique, encrypted data embedded in the QR code for this guest's entry to this event."
+        },
+        "seatNumber": {
+          "type": "string",
+          "description": "The assigned seat number for the guest at this event, if applicable."
+        },
+        "specialNotes": {
+          "type": "string",
+          "description": "Any special notes or requirements for this guest at this event (e.g., dietary restrictions, accessibility)."
+        },
+        "guestCategoryId": {
+          "type": "string",
+          "description": "Reference to the GuestCategory assigned to this guest for this event (e.g., VIP, Speaker). (Relationship: GuestCategory 0-1:N GuestEvent)"
+        },
+        "rsvpStatus": {
+          "type": "string",
+          "description": "The RSVP status of the guest for this event (e.g., 'Attending', 'NotAttending', 'Maybe', 'AttendingWithCompanions')."
+        },
+        "invitationTemplateId": {
+          "type": "string",
+          "description": "Reference to the InvitationTemplate used for this guest's invitation. (Relationship: InvitationTemplate 0-1:N GuestEvent)"
+        },
+        "invitationSentAt": {
+          "type": "string",
+          "description": "The timestamp when the invitation was sent to this guest for this event.",
+          "format": "date-time"
+        },
+        "companionsCount": {
+          "type": "number",
+          "description": "The number of unregistered companions expected to attend with this guest, as indicated by their RSVP."
+        },
+        "checkInTime": {
+          "type": "string",
+          "description": "The timestamp of the first successful check-in (scan) for this guest at this event.",
+          "format": "date-time"
+        },
+        "isBlocked": {
+          "type": "boolean",
+          "description": "Indicates if this guest's access to the event is currently blocked."
+        }
+      },
+      "required": [
+        "id",
+        "guestId",
+        "eventId",
+        "qrCodeData",
+        "rsvpStatus"
+      ]
+    },
+    "ScanRecord": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ScanRecord",
+      "type": "object",
+      "description": "Records each attempt to scan a guest's QR code at an event checkpoint, capturing validation results and staff actions.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ScanRecord entity."
+        },
+        "guestEventId": {
+          "type": "string",
+          "description": "Reference to the GuestEvent entry that was scanned. (Relationship: GuestEvent 1:N ScanRecord)"
+        },
+        "checkpointId": {
+          "type": "string",
+          "description": "Reference to the Checkpoint where the scan occurred. (Relationship: Checkpoint 1:N ScanRecord)"
+        },
+        "scanTimestamp": {
+          "type": "string",
+          "description": "The exact date and time when the QR code was scanned.",
+          "format": "date-time"
+        },
+        "scannerStaffId": {
+          "type": "string",
+          "description": "Reference to the User (Scanner Staff) who performed the scan. (Relationship: User 1:N ScanRecord)"
+        },
+        "isValid": {
+          "type": "boolean",
+          "description": "Indicates the initial validation result of the scan (true if valid, false if invalid, already scanned, or blocked)."
+        },
+        "status": {
+          "type": "string",
+          "description": "A detailed status of the scan attempt (e.g., 'Valid', 'AlreadyScanned', 'InvalidQRCode', 'Blocked', 'OverrideValid', 'OverrideInvalid')."
+        },
+        "isOverride": {
+          "type": "boolean",
+          "description": "Indicates if this scan record resulted from a manual override by staff."
+        },
+        "overrideReason": {
+          "type": "string",
+          "description": "The reason provided for a manual override, if applicable."
+        }
+      },
+      "required": [
+        "id",
+        "guestEventId",
+        "checkpointId",
+        "scanTimestamp",
+        "scannerStaffId",
+        "isValid",
+        "status",
+        "isOverride"
+      ]
     }
   },
   "auth": {
-    "providers": ["google.com", "password"]
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
-    "/events/{eventId}": {
-      "schema": "Event",
-      "description": "Collection of all events."
-    },
-    "/events/{eventId}/guests/{guestId}": {
-      "schema": "Guest",
-      "description": "Sub-collection of guests for a specific event."
-    }
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Collection for individual user profiles. Each document ID (`userId`) corresponds to the Firebase Authentication UID. Used for storing core user information and referenced by other entities for audit or ownership. This is not for authorization roles.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user, matching their Firebase Authentication UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_superAdmins/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Dedicated collection for SuperAdmin role assignment. The existence of a document here (with userId matching auth.uid) grants SuperAdmin privileges. Adheres to DBAC and QAP principles.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user assigned the SuperAdmin role."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_eventAdmins/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Dedicated collection for EventAdmin role assignment. The existence of a document here (with userId matching auth.uid) grants EventAdmin privileges. Adheres to DBAC and QAP principles.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user assigned the EventAdmin role."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_scannerStaff/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Dedicated collection for ScannerStaff role assignment. The existence of a document here (with userId matching auth.uid) grants ScannerStaff privileges. Adheres to DBAC and QAP principles.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user assigned the ScannerStaff role."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_receptionOfficers/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Dedicated collection for ReceptionOfficer role assignment. The existence of a document here (with userId matching auth.uid) grants ReceptionOfficer privileges. Adheres to DBAC and QAP principles.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user assigned the ReceptionOfficer role."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/invitationTemplates/{templateId}",
+        "definition": {
+          "entityName": "InvitationTemplate",
+          "schema": {
+            "$ref": "#/backend/entities/InvitationTemplate"
+          },
+          "description": "Subcollection for user-specific invitation templates. These templates are directly owned by the user specified in the path (`userId`). This structure ensures path-based ownership for authorization independence. Includes 'createdByUserId' for auditing, which should match the 'userId' path parameter.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user who owns these invitation templates."
+            },
+            {
+              "name": "templateId",
+              "description": "The unique ID of the invitation template."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/venues/{venueId}",
+        "definition": {
+          "entityName": "Venue",
+          "schema": {
+            "$ref": "#/backend/entities/Venue"
+          },
+          "description": "Top-level collection for managing all event venues. Typically managed by Super Admins and readable by Event Admins for event creation.",
+          "params": [
+            {
+              "name": "venueId",
+              "description": "The unique ID of the venue."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/events/{eventId}",
+        "definition": {
+          "entityName": "Event",
+          "schema": {
+            "$ref": "#/backend/entities/Event"
+          },
+          "description": "Top-level collection for all events. Each event is owned by an 'eventAdminId' for authorization independence. All subcollections for an event will denormalize this 'eventAdminId' for simplified rule evaluation.",
+          "params": [
+            {
+              "name": "eventId",
+              "description": "The unique ID of the event."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/events/{eventId}/staffAssignments/{staffUserId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Subcollection to manage staff assignments for a specific event. The existence of a document for a 'staffUserId' here implies they are authorized staff for the parent event. This enables authorization checks via `exists()` without needing a `get()` call to the staffAssignments document itself or denormalizing a full staff list into subcollections.",
+          "params": [
+            {
+              "name": "eventId",
+              "description": "The unique ID of the parent event."
+            },
+            {
+              "name": "staffUserId",
+              "description": "The unique ID of the staff member assigned to this event, matching their Firebase Authentication UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/events/{eventId}/checkpoints/{checkpointId}",
+        "definition": {
+          "entityName": "Checkpoint",
+          "schema": {
+            "$ref": "#/backend/entities/Checkpoint"
+          },
+          "description": "Subcollection for checkpoints belonging to a specific event. Includes denormalized 'eventAdminId' from the parent Event for authorization independence, allowing Event Admins to manage their checkpoints without `get()` calls.",
+          "params": [
+            {
+              "name": "eventId",
+              "description": "The unique ID of the parent event."
+            },
+            {
+              "name": "checkpointId",
+              "description": "The unique ID of the checkpoint."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/events/{eventId}/guestCategories/{guestCategoryId}",
+        "definition": {
+          "entityName": "GuestCategory",
+          "schema": {
+            "$ref": "#/backend/entities/GuestCategory"
+          },
+          "description": "Subcollection for event-specific guest categories. These categories are defined and managed by the Event Admin for the parent event. Includes denormalized 'eventAdminId' from the parent Event for authorization independence.",
+          "params": [
+            {
+              "name": "eventId",
+              "description": "The unique ID of the parent event."
+            },
+            {
+              "name": "guestCategoryId",
+              "description": "The unique ID of the guest category."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/events/{eventId}/guestEvents/{guestEventId}",
+        "definition": {
+          "entityName": "GuestEvent",
+          "schema": {
+            "$ref": "#/backend/entities/GuestEvent"
+          },
+          "description": "Subcollection linking specific guests to events, storing event-specific guest details like QR code data. Includes denormalized 'eventAdminId' from the parent Event for authorization independence, allowing Event Admins to manage their guest lists. Read access for staff is granted by checking existence in 'staffAssignments' subcollection.",
+          "params": [
+            {
+              "name": "eventId",
+              "description": "The unique ID of the parent event."
+            },
+            {
+              "name": "guestEventId",
+              "description": "The unique ID representing a guest's attendance record for this event."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/events/{eventId}/scanRecords/{scanRecordId}",
+        "definition": {
+          "entityName": "ScanRecord",
+          "schema": {
+            "$ref": "#/backend/entities/ScanRecord"
+          },
+          "description": "Subcollection for all scan attempts related to a specific event. Documents include denormalized 'eventAdminId' for Event Admin read access and 'scannerStaffId' for creator authentication. Scanner staff create these records, and Event Admins can view them for their respective events. Authorization for scanner staff is via 'staffAssignments' exists check.",
+          "params": [
+            {
+              "name": "eventId",
+              "description": "The unique ID of the parent event."
+            },
+            {
+              "name": "scanRecordId",
+              "description": "The unique ID of the scan record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/guests/{guestId}",
+        "definition": {
+          "entityName": "Guest",
+          "schema": {
+            "$ref": "#/backend/entities/Guest"
+          },
+          "description": "Top-level collection for a global directory of all guests. These are master guest profiles, primarily managed by Super Admins. Event Admins interact with event-specific guest data via GuestEvent records.",
+          "params": [
+            {
+              "name": "guestId",
+              "description": "The unique ID of the guest."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/globalGuestCategories/{guestCategoryId}",
+        "definition": {
+          "entityName": "GuestCategory",
+          "schema": {
+            "$ref": "#/backend/entities/GuestCategory"
+          },
+          "description": "Top-level collection for globally defined guest categories. These are managed by Super Admins and can be referenced by any event.",
+          "params": [
+            {
+              "name": "guestCategoryId",
+              "description": "The unique ID of the global guest category."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/globalInvitationTemplates/{templateId}",
+        "definition": {
+          "entityName": "InvitationTemplate",
+          "schema": {
+            "$ref": "#/backend/entities/InvitationTemplate"
+          },
+          "description": "Top-level collection for globally available invitation templates (e.g., default templates). Managed by Super Admins and potentially readable by all Event Admins.",
+          "params": [
+            {
+              "name": "templateId",
+              "description": "The unique ID of the global invitation template."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "This Firestore structure is designed to adhere to the core principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs, while also enforcing structural segregation and data predictability. The primary goal is to facilitate simple, robust, and easily debuggable security rules by minimizing `get()` calls and explicitly defining authorization context within documents or their immediate parent paths.\n\n**Authorization Independence (Denormalization Strategy):**\n1.  **Event Subcollections (`Checkpoints`, `GuestCategories`, `GuestEvents`, `ScanRecords`):** Documents within these subcollections (e.g., `/events/{eventId}/checkpoints/{checkpointId}`) directly include the `eventAdminId` from their parent `Event` document. This denormalization eliminates the need for `get(/events/$(eventId)).data.eventAdminId` in security rules, making rule evaluation atomic and efficient. For instance, to check if an Event Admin can manage a checkpoint, the rule only needs to verify `request.auth.uid == resource.data.eventAdminId`.\n2.  **`ScanRecord`:** In addition to `eventAdminId` for read access by admins, `ScanRecord` explicitly contains `scannerStaffId`. This allows for direct authentication that the user creating the record is indeed the `scannerStaffId` indicated (`request.auth.uid == request.resource.data.scannerStaffId`). Combined with an `exists()` check on `staffAssignments` (see below), this provides robust create permissions.\n3.  **`StaffAssignments` Collection:** Instead of denormalizing an entire `members` map into every sub-document, a dedicated subcollection `/events/{eventId}/staffAssignments/{staffUserId}` is used. The *existence* of a document at this path for a specific `staffUserId` (which would be `request.auth.uid`) implicitly grants that user a role for that event. Security rules can then use `exists(/databases/$(database)/documents/events/$(eventId)/staffAssignments/$(request.auth.uid))` instead of `get()`, satisfying the Authorization Independence mandate for collaborative data scenarios (e.g., Scanner Staff accessing `GuestEvent` records or creating `ScanRecord` documents).\n\n**QAPs (Secure List Operations) Support:**\n1.  **Path-Based Ownership:** For user-owned data like private invitation templates (`/users/{userId}/invitationTemplates`), QAPs are inherently supported as a user can only query within their own `/users/{userId}` path.\n2.  **Explicit `eventAdminId`:** For event-related entities like `Event`, `Checkpoint`, `GuestCategory` (event-specific), `GuestEvent`, and `ScanRecord`, the presence of `eventAdminId` allows Event Admins to perform `list` operations securely by querying for `eventAdminId == request.auth.uid`. For example, an Event Admin can list all `GuestEvents` for their event by querying `guestEvents.where('eventAdminId', '==', request.auth.uid)`.\n3.  **Structural Segregation:** By separating `GuestCategory` and `InvitationTemplate` into global and event/user-specific collections, security rules become simpler. Global collections (`/globalGuestCategories`, `/globalInvitationTemplates`) can be read by all or managed only by Super Admins, while segregated paths restrict access granularly.\n4.  **DBAC Role Collections:** Dedicated collections for roles (e.g., `/roles_superAdmins/{userId}`) allow for efficient and explicit `exists()` checks in rules to determine a user's global permissions, enabling secure filtering and access control for top-level collections like `/venues` or `/guests`.\n\nThis architecture prioritizes explicit data ownership, simplifies rule logic by moving complexity to structure, and ensures that authorization decisions are made without expensive or insecure cross-document `get()` operations, making the system highly debuggable and scalable."
   }
 }

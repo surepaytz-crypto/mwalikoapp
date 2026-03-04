@@ -1,0 +1,212 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * CORE PHILOSOPHY
+     * This ruleset implements a robust, role-based access control (RBAC) and database-based access control (DBAC) 
+     * model tailored for event management. It prioritizes "Authorization Independence" by leveraging denormalized 
+     * ownership fields (like eventAdminId) to ensure security checks are performant and do not require 
+     * recursive document lookups.
+     *
+     * DATA STRUCTURE
+     * The hierarchy is split between top-level global collections (users, venues, guests, global templates) 
+     * and event-scoped subcollections (checkpoints, scan records, staff assignments). User-specific 
+     * private data is stored under the /users/{userId} tree.
+     *
+     * KEY SECURITY DECISIONS
+     * 1. DBAC Roles: User roles (SuperAdmin, EventAdmin, etc.) are verified via existence checks in dedicated 
+     *    top-level "roles_" collections, providing a clear and auditable source of truth for permissions.
+     * 2. Staff Authorization: Access for scanning staff is determined by their presence in an event's 
+     *    'staffAssignments' subcollection.
+     * 3. Prototyping Flexibility: Rules enforce strict authorization (who can touch what) but allow for 
+     *    flexible data shapes (what is inside the document) to support rapid development.
+     * 4. Denormalization: Critical fields like 'eventAdminId' are expected to be present on all 
+     *    event-related documents to facilitate direct ownership validation.
+     */
+
+    // --- Helper Functions ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Verifies existence and ownership for destructive operations.
+     */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    // Role-Based Access Checks (DBAC)
+    function isSuperAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_superAdmins/$(request.auth.uid));
+    }
+
+    function isEventAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_eventAdmins/$(request.auth.uid));
+    }
+
+    function isScannerStaff() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_scannerStaff/$(request.auth.uid));
+    }
+
+    function isReceptionOfficer() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_receptionOfficers/$(request.auth.uid));
+    }
+
+    /**
+     * Checks if the authenticated user is assigned as staff for a specific event.
+     */
+    function isAssignedStaff(eventId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/events/$(eventId)/staffAssignments/$(request.auth.uid));
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for the User profiles. Allows users to manage their own profile and SuperAdmins to view all.
+     * @path /users/{userId}
+     * @allow Authenticated user (create) where UID matches document ID.
+     * @deny Any user (update) trying to change a profile that is not their own.
+     * @principle Enforces self-ownership for creation and updates.
+     */
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isSuperAdmin());
+      allow list: if isSignedIn() && (isOwner(userId) || isSuperAdmin());
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if false; // Profiles are typically archived, not deleted via client.
+    }
+
+    /**
+     * @description Rules for role-assignment collections. Only SuperAdmins can manage roles.
+     * @path /roles_{roleName}/{userId}
+     * @allow SuperAdmin (update) to modify user roles.
+     * @deny EventAdmin (create) attempting to grant themselves SuperAdmin status.
+     * @principle Centralizes administrative control in a restricted role-based hierarchy.
+     */
+    match /{roleCollection}/{userId} {
+      allow get, list: if isSignedIn() && (isOwner(userId) || isSuperAdmin());
+      allow create, update, delete: if isSuperAdmin() && roleCollection.matches('roles_.*');
+    }
+
+    /**
+     * @description Private invitation templates owned by individual users.
+     * @path /users/{userId}/invitationTemplates/{templateId}
+     * @allow User (create) a template under their own path.
+     * @deny User (get) a template belonging to another user.
+     * @principle Uses path-based ownership to isolate private user data.
+     */
+    match /users/{userId}/invitationTemplates/{templateId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.createdByUserId == request.auth.uid;
+      allow update, delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Global venues used for events. Managed by SuperAdmins, readable by EventAdmins.
+     * @path /venues/{venueId}
+     * @allow EventAdmin (get) to view venue details for scheduling.
+     * @deny EventAdmin (create) attempting to add a new venue.
+     * @principle Restricts infrastructure management to global administrators.
+     */
+    match /venues/{venueId} {
+      allow get, list: if isSignedIn() && (isSuperAdmin() || isEventAdmin());
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    /**
+     * @description Core event documents. Owned by an event admin.
+     * @path /events/{eventId}
+     * @allow EventAdmin (create) an event where they are the designated admin.
+     * @deny User (update) an event where they are not the eventAdminId.
+     * @principle Enforces document ownership via the 'eventAdminId' field for lifecycle management.
+     */
+    match /events/{eventId} {
+      allow get, list: if isSignedIn() && (isSuperAdmin() || isOwner(resource.data.eventAdminId) || isAssignedStaff(eventId));
+      allow create: if isEventAdmin() && request.resource.data.eventAdminId == request.auth.uid;
+      allow update: if isSignedIn() && (isSuperAdmin() || (resource != null && isOwner(resource.data.eventAdminId)));
+      allow delete: if isSignedIn() && (isSuperAdmin() || (resource != null && isOwner(resource.data.eventAdminId)));
+    }
+
+    /**
+     * @description Staff assignments for a specific event. Managed by the event's admin.
+     * @path /events/{eventId}/staffAssignments/{staffUserId}
+     * @allow EventAdmin (create) a staff assignment for their own event.
+     * @deny ScannerStaff (delete) their own assignment.
+     * @principle Delegates staff management to the event owner.
+     */
+    match /events/{eventId}/staffAssignments/{staffUserId} {
+      allow get, list: if isSignedIn() && (isSuperAdmin() || isAssignedStaff(eventId) || isOwner(get(/databases/$(database)/documents/events/$(eventId)).data.eventAdminId));
+      allow create, update, delete: if isSignedIn() && (isSuperAdmin() || isOwner(get(/databases/$(database)/documents/events/$(eventId)).data.eventAdminId));
+    }
+
+    /**
+     * @description Event checkpoints, guest categories, and guest list records.
+     * @path /events/{eventId}/{subcollection}/{id}
+     * @allow Assigned staff (get) guest details for scanning.
+     * @deny Unassigned user (list) guest events.
+     * @principle Uses denormalized admin IDs and staff existence checks for subcollection security.
+     */
+    match /events/{eventId}/{collectionGroup}/{docId} {
+      
+      // Define subcollections covered by these general event rules
+      function isEventSubcollection() {
+        return collectionGroup in ['checkpoints', 'guestCategories', 'guestEvents'];
+      }
+
+      allow get, list: if isEventSubcollection() && isSignedIn() && (
+        isSuperAdmin() || 
+        isOwner(resource.data.eventAdminId) || 
+        isAssignedStaff(eventId)
+      );
+
+      allow create: if isEventSubcollection() && isSignedIn() && (
+        isSuperAdmin() || 
+        (isEventAdmin() && request.resource.data.eventAdminId == request.auth.uid)
+      );
+
+      allow update, delete: if isEventSubcollection() && isSignedIn() && resource != null && (
+        isSuperAdmin() || 
+        isOwner(resource.data.eventAdminId)
+      );
+    }
+
+    /**
+     * @description Records of QR scans. Created by staff, viewed by admins.
+     * @path /events/{eventId}/scanRecords/{scanRecordId}
+     * @allow ScannerStaff (create) a record if they are assigned to the event.
+     * @deny ScannerStaff (update) a record after it has been submitted.
+     * @principle Ensures audit integrity by making scan records immutable for staff.
+     */
+    match /events/{eventId}/scanRecords/{scanRecordId} {
+      allow get, list: if isSignedIn() && (isSuperAdmin() || isOwner(resource.data.eventAdminId) || isOwner(resource.data.scannerStaffId));
+      allow create: if isSignedIn() && (
+        isSuperAdmin() || 
+        (isAssignedStaff(eventId) && request.resource.data.scannerStaffId == request.auth.uid)
+      );
+      allow update, delete: if isSuperAdmin(); // Scan records are immutable for staff and event admins.
+    }
+
+    /**
+     * @description Global directories and templates managed by SuperAdmins.
+     * @path /{globalCollection}/{id}
+     * @allow EventAdmin (get) a global invitation template.
+     * @deny EventAdmin (create) a global guest record.
+     * @principle Protects global master data from unauthorized modification.
+     */
+    match /{globalCollection}/{id} {
+      function isGlobalCollection() {
+        return globalCollection in ['guests', 'globalGuestCategories', 'globalInvitationTemplates'];
+      }
+
+      allow get, list: if isGlobalCollection() && isSignedIn() && (isSuperAdmin() || isEventAdmin() || isScannerStaff() || isReceptionOfficer());
+      allow create, update, delete: if isGlobalCollection() && isSuperAdmin();
+    }
+  }
+}
