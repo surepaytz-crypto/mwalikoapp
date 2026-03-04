@@ -1,172 +1,126 @@
-
 "use client";
 
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Navbar } from "@/components/Navbar";
-import { useTranslation } from "@/context/LanguageContext";
+import { Sparkles, ShieldCheck, Mail, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, QrCode, ShieldCheck, GlassWater, Utensils, DoorOpen, MessageSquare, Send } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
-export default function Home() {
-  const { t } = useTranslation();
+export default function ComingSoonPage() {
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
+
+  useEffect(() => {
+    // Set target date to 7 days from now
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + 7);
+    const targetTime = targetDate.getTime();
+
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const difference = targetTime - now;
+
+      if (difference <= 0) {
+        clearInterval(timer);
+        return;
+      }
+
+      setTimeLeft({
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((difference % (1000 * 60)) / 1000),
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <Navbar />
-      
-      <main className="flex-1">
-        {/* Hero Section with Illustration */}
-        <section className="relative h-[85vh] w-full overflow-hidden bg-primary">
-          {/* Background Illustration */}
-          <div className="absolute inset-0 opacity-40">
-             <Image 
-                src="https://picsum.photos/seed/mwaliko-elegance/1920/1080"
-                alt="Luxury Event Illustration"
-                fill
-                priority
-                className="object-cover"
-                data-ai-hint="luxury illustration"
-             />
-             <div className="absolute inset-0 bg-gradient-to-b from-primary/60 to-primary/20"></div>
-          </div>
-          
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="container px-4 text-center text-white z-10">
-              <h1 className="mb-6 font-headline text-5xl font-bold tracking-tight md:text-7xl drop-shadow-lg">
-                {t('tagline')}
-              </h1>
-              <p className="mx-auto mb-10 max-w-2xl text-lg font-light md:text-xl text-white/90 drop-shadow">
-                {t('luxuryDescription')}
-              </p>
-              <div className="flex flex-col items-center justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-                <Link href="/login">
-                  <Button size="lg" className="h-14 px-10 text-lg bg-accent text-accent-foreground hover:bg-accent/90 border-none shadow-xl font-bold">
-                    {t('createEvent')}
-                  </Button>
-                </Link>
-                <Link href="/login">
-                  <Button size="lg" className="h-14 px-10 text-lg bg-accent text-accent-foreground hover:bg-accent/90 border-none shadow-xl font-bold">
-                    {t('login')}
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
+    <div className="min-h-screen bg-primary flex flex-col items-center justify-center relative overflow-hidden font-body text-primary-foreground p-6">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 opacity-20 pointer-events-none">
+        <Image 
+          src="https://picsum.photos/seed/mwaliko-launch/1920/1080"
+          alt="Luxury Backdrop"
+          fill
+          priority
+          className="object-cover"
+          data-ai-hint="luxury event"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary via-primary/80 to-primary"></div>
+      </div>
 
-        {/* Omnichannel Invitations Section */}
-        <section className="py-24 bg-card border-y">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row items-center gap-12">
-              <div className="flex-1 space-y-6">
-                <h2 className="font-headline text-4xl font-bold text-primary">{t('serviceTitle')}</h2>
-                <p className="text-lg text-muted-foreground leading-relaxed">
-                  {t('serviceDescription')}
-                </p>
-                <div className="flex gap-4">
-                  <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-bold text-sm">
-                    <MessageSquare className="h-4 w-4" /> WhatsApp
-                  </div>
-                  <div className="flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full font-bold text-sm">
-                    <Send className="h-4 w-4" /> SMS
-                  </div>
-                </div>
-              </div>
-              <div className="flex-1">
-                <div className="relative p-8 bg-background rounded-3xl border-2 border-accent shadow-xl rotate-2">
-                   <div className="space-y-4">
-                     <div className="bg-muted p-3 rounded-lg w-2/3 ml-auto text-xs text-primary font-medium">
-                        Habari Mgeni Rasmi! Unakaribishwa kwa furaha kwenye Usiku wa Fahari. Namba yako ya siri ya QR imeambatishwa hapa.
-                     </div>
-                     <div className="bg-accent/20 p-4 rounded-xl text-center">
-                        <QrCode className="h-20 w-20 mx-auto text-accent mb-2" />
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-primary">SECURE ACCESS</p>
-                     </div>
-                   </div>
-                </div>
-              </div>
-            </div>
+      <div className="z-10 w-full max-w-4xl text-center space-y-12">
+        {/* Brand Identity */}
+        <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-1000">
+          <div className="mx-auto w-20 h-20 bg-accent/20 rounded-full flex items-center justify-center mb-6 border border-accent/30 shadow-[0_0_40px_rgba(212,175,55,0.2)]">
+            <Sparkles className="h-10 w-10 text-accent" />
           </div>
-        </section>
-
-        {/* Features Section */}
-        <section className="py-24 bg-background">
-          <div className="container mx-auto px-4">
-            <div className="mb-16 text-center">
-              <h2 className="mb-4 font-headline text-4xl font-bold text-primary">Premium Event Management</h2>
-              <div className="mx-auto h-1 w-20 bg-accent"></div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-12 md:grid-cols-3">
-              <FeatureCard 
-                icon={<Calendar className="h-8 w-8 text-accent" />}
-                title={t('events')}
-                description="Manage multiple entry phases and venues with refined ease."
-              />
-              <FeatureCard 
-                icon={<ShieldCheck className="h-8 w-8 text-accent" />}
-                title="3-Point Scanning"
-                description="Secure your event with specific check-ins for the Gate, Drinks, and Food areas."
-              />
-              <FeatureCard 
-                icon={<QrCode className="h-8 w-8 text-accent" />}
-                title="Print-Ready Invites"
-                description="Generate high-resolution invitations with unique QR codes for physical printing."
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* 3-Point Logic Highlight */}
-        <section className="py-24 bg-primary text-primary-foreground relative overflow-hidden">
-          <div className="container mx-auto px-4 relative z-10 text-center max-w-4xl">
-            <h2 className="font-headline text-4xl md:text-5xl font-bold mb-6">Uncompromising Security Control</h2>
-            <p className="text-lg text-primary-foreground/70 font-light leading-relaxed mb-10">
-              Mwaliko's 3-point scan logic ensures every phase of your event is tracked. Monitor guest access from the initial entry to refreshment collection.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-6 rounded-xl bg-white/5 backdrop-blur border border-white/10">
-                <DoorOpen className="h-8 w-8 text-accent mx-auto mb-4" />
-                <div className="text-accent font-bold text-xl mb-2">{t('checkpointGate')}</div>
-                <p className="text-sm opacity-60">Initial guest verification</p>
-              </div>
-              <div className="p-6 rounded-xl bg-white/5 backdrop-blur border border-white/10">
-                <GlassWater className="h-8 w-8 text-accent mx-auto mb-4" />
-                <div className="text-accent font-bold text-xl mb-2">{t('checkpointDrinks')}</div>
-                <p className="text-sm opacity-60">Refreshment access control</p>
-              </div>
-              <div className="p-6 rounded-xl bg-white/5 backdrop-blur border border-white/10">
-                <Utensils className="h-8 w-8 text-accent mx-auto mb-4" />
-                <div className="text-accent font-bold text-xl mb-2">{t('checkpointFood')}</div>
-                <p className="text-sm opacity-60">Catering verification</p>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <footer className="border-t py-12 bg-background">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} Mwaliko App. {t('tagline')}
+          <h1 className="font-headline text-5xl md:text-7xl font-bold tracking-tighter">
+            Mwaliko App<span className="text-accent">.</span>
+          </h1>
+          <p className="text-accent font-bold uppercase tracking-[0.4em] text-sm md:text-base">
+            Elegance is Arriving
           </p>
         </div>
-      </footer>
+
+        {/* Countdown Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 max-w-2xl mx-auto">
+          <TimeBlock value={timeLeft.days} label="Days" />
+          <TimeBlock value={timeLeft.hours} label="Hours" />
+          <TimeBlock value={timeLeft.minutes} label="Minutes" />
+          <TimeBlock value={timeLeft.seconds} label="Seconds" />
+        </div>
+
+        {/* Mission Statement */}
+        <div className="max-w-xl mx-auto space-y-6">
+          <p className="text-lg md:text-xl font-light leading-relaxed opacity-80">
+            We are refining the ultimate registry and security experience for distinguished celebrations. Hosted by <strong>360 Digital</strong>.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row items-center gap-3 pt-4">
+             <div className="relative flex-1 w-full">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40" />
+                <Input 
+                  placeholder="Enter your email for early access" 
+                  className="h-14 pl-12 bg-white/5 border-white/20 text-white placeholder:text-white/30 rounded-xl"
+                />
+             </div>
+             <Button className="h-14 px-8 bg-accent text-accent-foreground font-bold rounded-xl hover:bg-accent/90 shadow-xl w-full sm:w-auto">
+                Notify Me <ArrowRight className="ml-2 h-4 w-4" />
+             </Button>
+          </div>
+        </div>
+
+        {/* Footer Branding */}
+        <div className="pt-20 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-6 opacity-60">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
+            <ShieldCheck className="h-4 w-4 text-accent" /> Secure Invitation System
+          </div>
+          <div className="text-center md:text-right">
+            <p className="text-xs font-bold uppercase tracking-tighter">Chacha Steven</p>
+            <p className="text-[10px] uppercase tracking-widest">Founder, 360 Digital</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function FeatureCard({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
+function TimeBlock({ value, label }: { value: number; label: string }) {
   return (
-    <div className="group flex flex-col items-center text-center p-8 rounded-2xl border bg-card transition-all hover:shadow-xl hover:-translate-y-1">
-      <div className="mb-6 p-4 rounded-xl bg-accent/10 group-hover:bg-accent/20 transition-colors">
-        {icon}
-      </div>
-      <h3 className="mb-4 font-headline text-2xl font-bold text-primary">{title}</h3>
-      <p className="text-muted-foreground font-light leading-relaxed">
-        {description}
-      </p>
+    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 flex flex-col items-center justify-center shadow-2xl transition-transform hover:scale-105 duration-300">
+      <span className="text-4xl md:text-6xl font-black font-mono text-white mb-2 tracking-tighter">
+        {value.toString().padStart(2, '0')}
+      </span>
+      <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-accent opacity-80">
+        {label}
+      </span>
     </div>
   );
 }
