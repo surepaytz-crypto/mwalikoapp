@@ -61,6 +61,7 @@ export default function ScanPage() {
     setScannedGuest(null);
 
     try {
+      // Find guest by ticketId (MW0IQ format)
       const q = query(
         collection(db, "events", eventId as string, "guestEvents"), 
         where("ticketId", "==", ticketId)
@@ -76,14 +77,17 @@ export default function ScanPage() {
       const guestData = guestDoc.data();
       const checkpointField = activeCheckpoint === "GATE" ? "scannedGate" : activeCheckpoint === "DRINKS" ? "scannedDrinks" : "scannedFood";
 
+      // Check if already used at this specific point
       if (guestData[checkpointField]) {
         setStatus("used");
         setScannedGuest({ name: guestData.guestName, category: guestData.category });
         return;
       }
 
+      // Mark as scanned
       await updateDoc(guestDoc.ref, { [checkpointField]: true });
 
+      // Update event stats for this category and point
       const eventRef = doc(db, "events", eventId as string);
       const statPath = `stats.${guestData.category}.${activeCheckpoint.toLowerCase()}`;
       await updateDoc(eventRef, { [statPath]: increment(1) });
@@ -113,7 +117,7 @@ export default function ScanPage() {
         </Link>
         <div className="text-center">
           <h1 className="font-headline text-xl font-bold">Mwaliko Scanner</h1>
-          <p className="text-[10px] uppercase tracking-widest opacity-60">{event?.nameEn || "Checking Registry"}</p>
+          <p className="text-[10px] uppercase tracking-widest opacity-60">{event?.nameEn || "Pima & Jenifa Wedding"}</p>
         </div>
         <div className="w-10"></div>
       </header>
@@ -122,7 +126,7 @@ export default function ScanPage() {
         <div className="w-full max-w-xs space-y-3">
           <div className="flex items-center gap-2 mb-1">
             <MapPin className="h-4 w-4 text-accent" />
-            <label className="text-[10px] font-bold uppercase tracking-widest opacity-70">Active Checkpoint</label>
+            <label className="text-[10px] font-bold uppercase tracking-widest opacity-70">Selected Checkpoint</label>
           </div>
           <Select value={activeCheckpoint} onValueChange={(v) => setActiveCheckpoint(v as Checkpoint)}>
             <SelectTrigger className="bg-white/10 border-white/30 text-white h-14 rounded-xl text-lg font-bold">
@@ -164,7 +168,7 @@ export default function ScanPage() {
             <div className="absolute inset-0 bg-destructive flex flex-col items-center justify-center animate-in zoom-in-95 fade-in duration-300 z-20 text-center px-6">
                <XCircle className="h-24 w-24 text-white mb-4" />
                <h2 className="text-4xl font-black">{t('statusInvalid')}</h2>
-               <p className="text-white/80 mt-2 font-bold">Ticket not recognized</p>
+               <p className="text-white/80 mt-2 font-bold">Ticket not found in Registry</p>
                <Button variant="ghost" className="mt-8 text-white/70 hover:text-white" onClick={() => setStatus("idle")}>Try Again</Button>
             </div>
           )}
@@ -174,7 +178,7 @@ export default function ScanPage() {
                <Info className="h-24 w-24 text-white mb-4" />
                <h2 className="text-3xl font-black">{t('statusUsed')}</h2>
                <p className="mt-4 text-white/90 font-bold leading-tight">
-                {scannedGuest?.name}<br/>already used at {activeCheckpoint}
+                {scannedGuest?.name}<br/>already checked-in at {activeCheckpoint}
                </p>
                <Button variant="ghost" className="mt-8 text-white/70 hover:text-white" onClick={() => setStatus("idle")}>Acknowledge</Button>
             </div>
@@ -217,7 +221,7 @@ export default function ScanPage() {
       </main>
 
       <footer className="p-8 text-center bg-black/30 border-t border-white/5">
-        <p className="text-[9px] font-bold uppercase tracking-[0.4em] opacity-40">Mwaliko Premium &bull; High-Security Scanning</p>
+        <p className="text-[9px] font-bold uppercase tracking-[0.4em] opacity-40">Mwaliko Premium &bull; Verified Entry System</p>
       </footer>
     </div>
   );

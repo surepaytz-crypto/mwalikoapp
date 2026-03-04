@@ -48,32 +48,41 @@ export default function Dashboard() {
   }, [db, activeEvent]);
   const { data: staffList } = useCollection(staffQuery);
 
-  const handleCreateMockEvent = () => {
+  const handleCreateDemoEvent = () => {
     if (!db || !user) return;
     addDoc(collection(db, "events"), {
-      nameEn: "Luxury Gala Night",
-      nameSw: "Usiku wa Fahari",
-      type: "Gala",
-      startDate: new Date(Date.now() + 86400000 * 7).toISOString(), 
-      venue: "Serena Hotel Ballroom",
-      status: "Planning",
-      guestCapacity: 500,
-      categories: ["VIP", "Standard", "VVIP"],
+      nameEn: "Harusi ya Pima na Jenifa",
+      nameSw: "Harusi ya Pima na Jenifa",
+      type: "Wedding",
+      startDate: new Date(Date.now() + 86400000 * 30).toISOString(), 
+      venue: "Mlimani City Hall, Dar es Salaam",
+      status: "Active",
+      guestCapacity: 1000,
+      categories: ["VVIP", "VIP", "Family", "Friends", "Press"],
       isActive: true,
       eventAdminId: user.uid,
-      stats: {}
+      stats: {
+        VVIP: { gate: 0, drinks: 0, food: 0 },
+        VIP: { gate: 0, drinks: 0, food: 0 },
+        Family: { gate: 0, drinks: 0, food: 0 },
+        Friends: { gate: 0, drinks: 0, food: 0 },
+        Press: { gate: 0, drinks: 0, food: 0 }
+      }
     });
+    toast({ title: "Demo Event Created", description: "Harusi ya Pima na Jenifa is now active." });
   };
 
   const handleCsvSimulation = async (eventId: string) => {
     if (!db) return;
     setIsUploading(true);
     
+    // Sample format: Ticket ID (No marks), Name, Category
     const mockData = [
-      { ticketId: "ML0IQ", name: "Hon. Kassim Majaliwa", category: "VIP" },
-      { ticketId: "MW123", name: "John Doe", category: "Standard" },
-      { ticketId: "MA98M", name: "Jane Smith", category: "Standard" },
-      { ticketId: "MLK72", name: "Salum Khalfan", category: "VVIP" },
+      { ticketId: "ML0IQ", name: "Hon. Kassim Majaliwa", category: "VVIP" },
+      { ticketId: "MA98M", name: "Mama Pima", category: "Family" },
+      { ticketId: "MW123", name: "Juma Nature", category: "VIP" },
+      { ticketId: "MA001", name: "Jenifa's Bestie", category: "Friends" },
+      { ticketId: "ML777", name: "Cloud FM Reporter", category: "Press" },
     ];
 
     try {
@@ -93,7 +102,7 @@ export default function Dashboard() {
         });
       });
       await batch.commit();
-      toast({ title: "Import Successful", description: `${mockData.length} guests imported.` });
+      toast({ title: "Import Successful", description: `${mockData.length} guests imported from CSV.` });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Import Failed", description: e.message });
     } finally {
@@ -126,7 +135,7 @@ export default function Dashboard() {
 
     setStaffUsername("");
     setStaffPassword("");
-    toast({ title: "Staff Added", description: `${staffUsername} assigned to ${staffCheckpoint}` });
+    toast({ title: "Staff Assigned", description: `${staffUsername} is now active at ${staffCheckpoint}` });
   };
 
   const handleDeleteStaff = (staffId: string) => {
@@ -150,53 +159,62 @@ export default function Dashboard() {
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="font-headline text-3xl font-bold text-primary">{t('dashboard')}</h1>
-            <p className="text-muted-foreground">Premium registry and 3-point analytics</p>
+            <p className="text-muted-foreground">Mwaliko Premium Registry &bull; Real-time Analytics</p>
           </div>
           <div className="flex gap-2">
-            {activeEvent && (
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="border-accent text-accent">
-                    <FileSpreadsheet className="mr-2 h-4 w-4" /> {t('importGuests')}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{t('uploadCsv')}</DialogTitle>
-                    <DialogDescription>Format: Ticket Number, Name, Category</DialogDescription>
-                  </DialogHeader>
-                  <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed rounded-lg border-muted-foreground/20 bg-muted/5">
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <Button onClick={() => handleCsvSimulation(activeEvent.id)} disabled={isUploading}>
-                      {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('processing')}</> : "Simulate CSV Import"}
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+            {!activeEvent && (
+              <Button onClick={handleCreateDemoEvent} className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-xl">
+                <Plus className="mr-2 h-4 w-4" /> Load Demo Event
+              </Button>
             )}
-            <Button onClick={handleCreateMockEvent} className="bg-primary text-primary-foreground hover:bg-primary/90">
-              <Plus className="mr-2 h-4 w-4" /> {t('createEvent')}
-            </Button>
+            {activeEvent && (
+              <div className="flex gap-2">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="border-accent text-accent">
+                      <FileSpreadsheet className="mr-2 h-4 w-4" /> {t('importGuests')}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{t('uploadCsv')}</DialogTitle>
+                      <DialogDescription>{t('importFormat')}</DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed rounded-lg border-muted-foreground/20 bg-muted/5">
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                      <Button onClick={() => handleCsvSimulation(activeEvent.id)} disabled={isUploading}>
+                        {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('processing')}</> : "Simulate CSV Import"}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <Link href={`/events/${activeEvent.id}/scan`}>
+                   <Button className="bg-primary text-primary-foreground">
+                      <QrCode className="mr-2 h-4 w-4" /> Go to Scanner
+                   </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard icon={<Calendar className="h-5 w-5" />} title={t('events')} value={events?.length.toString() || "0"} label="Total Events" />
-          <StatCard icon={<TrendingUp className="h-5 w-5" />} title="Checkpoint" value="3-Point" label="Gate, Drinks, Food" />
-          <StatCard icon={<Users className="h-5 w-5" />} title="Capacity" value={activeEvent ? activeEvent.guestCapacity?.toString() : "0"} label="Total Invitations" />
-          <StatCard icon={<QrCode className="h-5 w-5" />} title="Tiers" value={activeEvent ? `${activeEvent.categories?.length || 0}` : "0"} label="Active Categories" />
+          <StatStat icon={<Calendar className="h-5 w-5" />} title={t('events')} value={events?.length.toString() || "0"} label="Total Created" />
+          <StatStat icon={<TrendingUp className="h-5 w-5" />} title="Logic" value="3-Point" label="Gate, Drinks, Food" />
+          <StatStat icon={<Users className="h-5 w-5" />} title="Guest Cap" value={activeEvent ? activeEvent.guestCapacity?.toString() : "0"} label="Total Registered" />
+          <StatStat icon={<QrCode className="h-5 w-5" />} title="Tiers" value={activeEvent ? `${activeEvent.categories?.length || 0}` : "0"} label="Guest Categories" />
         </div>
 
         {activeEvent && (
           <Tabs defaultValue="analytics" className="mt-12">
             <TabsList className="grid w-full grid-cols-2 max-w-[400px] mb-8">
-              <TabsTrigger value="analytics">Live Category Stats</TabsTrigger>
-              <TabsTrigger value="staff">Staff Management</TabsTrigger>
+              <TabsTrigger value="analytics">Live Analytics</TabsTrigger>
+              <TabsTrigger value="staff">Staff Access</TabsTrigger>
             </TabsList>
             
             <TabsContent value="analytics" className="space-y-8">
               <div className="flex items-center justify-between">
-                 <h2 className="font-headline text-2xl font-bold">Registry Stats: {activeEvent.nameEn}</h2>
+                 <h2 className="font-headline text-2xl font-bold">Event Stats: {activeEvent.nameEn}</h2>
                  <Dialog>
                     <DialogTrigger asChild>
                       <Button variant="ghost" size="sm" className="text-accent underline decoration-accent/30 underline-offset-4">
@@ -206,7 +224,7 @@ export default function Dashboard() {
                     <DialogContent>
                        <DialogHeader>
                          <DialogTitle>{t('manageCategories')}</DialogTitle>
-                         <DialogDescription>Define all guest tiers.</DialogDescription>
+                         <DialogDescription>Define your guest tiers for precise tracking.</DialogDescription>
                        </DialogHeader>
                        <div className="space-y-4 py-4">
                           <div className="flex flex-wrap gap-2">
@@ -224,19 +242,19 @@ export default function Dashboard() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <ScanAnalyticsCard 
+                <CategoryScanCard 
                   icon={<DoorOpen className="h-5 w-5 text-accent" />} 
                   title={t('checkpointGate')} 
                   event={activeEvent}
                   checkpoint="gate"
                 />
-                <ScanAnalyticsCard 
+                <CategoryScanCard 
                   icon={<GlassWater className="h-5 w-5 text-accent" />} 
                   title={t('checkpointDrinks')} 
                   event={activeEvent}
                   checkpoint="drinks"
                 />
-                <ScanAnalyticsCard 
+                <CategoryScanCard 
                   icon={<Utensils className="h-5 w-5 text-accent" />} 
                   title={t('checkpointFood')} 
                   event={activeEvent}
@@ -251,16 +269,16 @@ export default function Dashboard() {
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <UserPlus className="h-5 w-5 text-accent" />
-                      Add Scanning Staff
+                      Assign Security Staff
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Username</Label>
+                      <Label>Staff Username</Label>
                       <Input value={staffUsername} onChange={(e) => setStaffUsername(e.target.value)} placeholder="e.g. juma_gate" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Password</Label>
+                      <Label>Access Password</Label>
                       <Input type="password" value={staffPassword} onChange={(e) => setStaffPassword(e.target.value)} />
                     </div>
                     <div className="space-y-2">
@@ -277,14 +295,14 @@ export default function Dashboard() {
                       </Select>
                     </div>
                     <Button className="w-full bg-accent text-accent-foreground" onClick={handleAddStaff}>
-                      Assign Staff
+                      Save Staff Member
                     </Button>
                   </CardContent>
                 </Card>
 
                 <Card className="lg:col-span-2 border-none shadow-sm">
                   <CardHeader>
-                    <CardTitle className="text-lg">Staff List</CardTitle>
+                    <CardTitle className="text-lg">Assigned Staff for {activeEvent.nameEn}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
@@ -305,7 +323,7 @@ export default function Dashboard() {
                         </div>
                       ))}
                       {(!staffList || staffList.length === 0) && (
-                        <p className="text-center py-8 text-muted-foreground italic">No staff members assigned yet.</p>
+                        <p className="text-center py-8 text-muted-foreground italic">No staff assigned to this event yet.</p>
                       )}
                     </div>
                   </CardContent>
@@ -319,7 +337,7 @@ export default function Dashboard() {
   );
 }
 
-function ScanAnalyticsCard({ icon, title, event, checkpoint }: { icon: React.ReactNode, title: string, event: any, checkpoint: string }) {
+function CategoryScanCard({ icon, title, event, checkpoint }: { icon: React.ReactNode, title: string, event: any, checkpoint: string }) {
   const categories = event.categories || ["VIP", "Standard"];
   const totalPossible = event.guestCapacity || 100;
   const totalScanned = categories.reduce((acc: number, cat: string) => acc + (event.stats?.[cat]?.[checkpoint] || 0), 0);
@@ -350,7 +368,7 @@ function ScanAnalyticsCard({ icon, title, event, checkpoint }: { icon: React.Rea
   );
 }
 
-function StatCard({ icon, title, value, label }: { icon: React.ReactNode, title: string, value: string, label: string }) {
+function StatStat({ icon, title, value, label }: { icon: React.ReactNode, title: string, value: string, label: string }) {
   return (
     <Card className="border-none shadow-sm hover:shadow-md transition-all">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
