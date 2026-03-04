@@ -171,16 +171,16 @@ export default function Dashboard() {
     
     // Simulate complex guest list with "No" mapping to "Ticket ID"
     const mockData = [
-      { ticketId: "ML0IQ", name: "Hon. Kassim Majaliwa", category: "VVIP" },
-      { ticketId: "MA98M", name: "Mama Pima", category: "Family" },
-      { ticketId: "MW123", name: "Juma Nature", category: "VIP" },
-      { ticketId: "MA001", name: "Jenifa's Bestie", category: "Friends" },
-      { ticketId: "ML777", name: "Cloud FM Reporter", category: "Press" },
-      { ticketId: "ML101", name: "Baba Pima", category: "Family" },
-      { ticketId: "ML202", name: "Auntie Jane", category: "Family" },
-      { ticketId: "ML303", name: "Uncle Sam", category: "Family" },
-      { ticketId: "ML404", name: "Hon. Samia Suluhu", category: "VVIP" },
-      { ticketId: "ML505", name: "Diamond Platnumz", category: "VIP" },
+      { ticketId: "ML0IQ", name: "Hon. Kassim Majaliwa", category: "VVIP", phone: "255712345678" },
+      { ticketId: "MA98M", name: "Mama Pima", category: "Family", phone: "255711223344" },
+      { ticketId: "MW123", name: "Juma Nature", category: "VIP", phone: "255755009988" },
+      { ticketId: "MA001", name: "Jenifa's Bestie", category: "Friends", phone: "255766112233" },
+      { ticketId: "ML777", name: "Cloud FM Reporter", category: "Press", phone: "255744889900" },
+      { ticketId: "ML101", name: "Baba Pima", category: "Family", phone: "255711334455" },
+      { ticketId: "ML202", name: "Auntie Jane", category: "Family", phone: "255711445566" },
+      { ticketId: "ML303", name: "Uncle Sam", category: "Family", phone: "255711556677" },
+      { ticketId: "ML404", name: "Hon. Samia Suluhu", category: "VVIP", phone: "255700112233" },
+      { ticketId: "ML505", name: "Diamond Platnumz", category: "VIP", phone: "255711000111" },
     ];
 
     try {
@@ -211,6 +211,7 @@ export default function Dashboard() {
           guestName: item.name,
           ticketId: item.ticketId,
           category: item.category,
+          phoneNumber: item.phone,
           eventId: eventId,
           scannedGate: isScanned,
           scannedDrinks: scanDrinks,

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -9,11 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { QrCode, User, MapPin, Printer, MessageSquare, ShieldCheck, Loader2, Image as ImageIcon, Sparkles, Check, Save, Share2 } from "lucide-react";
+import { QrCode, User, MapPin, Printer, MessageSquare, ShieldCheck, Loader2, Image as ImageIcon, Sparkles, Check, Save, Share2, Download, FileSpreadsheet } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import { useParams } from "next/navigation";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, collection, getDocs } from "firebase/firestore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,7 @@ export default function InvitePage() {
   const [showPhoto, setShowPhoto] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [isDownloadingCsv, setIsDownloadingCsv] = useState(false);
 
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const invitationRef = useRef<HTMLDivElement>(null);
@@ -138,6 +140,48 @@ export default function InvitePage() {
     }
   };
 
+  const handleDownloadRegistry = async () => {
+    if (!db || !id) return;
+    setIsDownloadingCsv(true);
+    try {
+      const q = collection(db, "events", id as string, "guestEvents");
+      const snapshot = await getDocs(q);
+      const guests = snapshot.docs.map(doc => doc.data());
+      
+      if (guests.length === 0) {
+        toast({ title: "No Guests", description: "The registry is empty. Please import guests on the Dashboard first." });
+        return;
+      }
+
+      const headers = ["Guest Name", "Category", "Ticket ID", "Phone Number"];
+      const csvContent = [
+        headers.join(","),
+        ...guests.map(g => [
+          `"${g.guestName}"`,
+          `"${g.category}"`,
+          `"${g.ticketId}"`,
+          `"${g.phoneNumber || ''}"`
+        ].join(","))
+      ].join("\n");
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Registry_${event?.shortId || id}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({ title: "CSV Downloaded", description: "Full guest list with Ticket IDs exported." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Export Failed", description: e.message });
+    } finally {
+      setIsDownloadingCsv(false);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -147,18 +191,16 @@ export default function InvitePage() {
     setIsSharing(true);
     
     const name = guestName || "Mgeni Rasmi";
-    const eventName = event?.nameEn || "tukio letu";
+    const eventNameText = event?.nameEn || "tukio letu";
     const cat = category || "STANDARD";
     
-    const whatsappMessage = `Habari ${name}, Karibu kwenye ${eventName}\n\nTICKET ID: ${ticketId}\nCATEGORY: ${cat}\n\nAsante na karibu sana.\n\nCard Powered by 360 Digital. TEL: 0614 320 858`;
+    const whatsappMessage = `Habari ${name}, Karibu kwenye ${eventNameText}\n\nTICKET ID: ${ticketId}\nCATEGORY: ${cat}\n\nAsante na karibu sana.\n\nCard Powered by 360 Digital. TEL: 0614 320 858`;
     
     try {
-      // 1. Get QR code as data URI
       const qrCanvas = qrCanvasRef.current;
       if (!qrCanvas) throw new Error("QR Canvas not found");
       const qrDataUri = qrCanvas.toDataURL("image/png");
 
-      // 2. Call AI Flow to generate high-end invitation image
       const template = TEMPLATES.find(t => t.id === selectedTemplate);
       const aiResponse = await aiWhatsappInvitationGenerator({
         eventName: event?.nameEn || "Event",
@@ -173,7 +215,6 @@ export default function InvitePage() {
         qrCodeImage: qrDataUri
       });
 
-      // 3. Share via Web Share API (if supported) to include image
       const response = await fetch(aiResponse.invitationCardImageUrl);
       const blob = await response.blob();
       const file = new File([blob], `invitation-${ticketId}.png`, { type: 'image/png' });
@@ -185,7 +226,6 @@ export default function InvitePage() {
           text: whatsappMessage,
         });
       } else {
-        // Fallback for desktop: Open WhatsApp with text and trigger image download
         const link = document.createElement('a');
         link.href = aiResponse.invitationCardImageUrl;
         link.download = `Invitation_${name.replace(/\s+/g, '_')}.png`;
@@ -236,6 +276,9 @@ export default function InvitePage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Button onClick={handleDownloadRegistry} disabled={isDownloadingCsv} variant="outline" className="border-accent text-accent">
+                {isDownloadingCsv ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />} {t('downloadRegistry')}
+              </Button>
               <Button onClick={handleSaveSettings} disabled={isSaving} className="bg-primary text-primary-foreground">
                 {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Save className="mr-2 h-4 w-4" />} Save Design
               </Button>
