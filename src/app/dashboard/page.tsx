@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useTranslation } from "@/context/LanguageContext";
@@ -51,6 +50,10 @@ export default function Dashboard() {
   const [reportGuests, setReportGuests] = useState<any[]>([]);
   const [isResendingEmail, setIsResendingEmail] = useState(false);
   
+  // Client-side hydration safety
+  const [paymentRef, setPaymentRef] = useState<string>("");
+  const [expiryLabel, setExpiryLabel] = useState<string>("");
+
   // Creation Wizard State
   const [creationStage, setCreationStage] = useState<CreationStage>("plans");
   const [selectedPlan, setSelectedPlan] = useState<PackageType>("Free");
@@ -86,6 +89,7 @@ export default function Dashboard() {
   const { data: events, isLoading: eventsLoading } = useCollection(eventsQuery);
 
   const hasActivePremium = userProfile?.subscription?.type === "Premium" && 
+    userProfile.subscription.expiryDate && 
     new Date(userProfile.subscription.expiryDate) > new Date();
 
   useEffect(() => {
@@ -93,6 +97,19 @@ export default function Dashboard() {
       setactiveEventId(events[0].id);
     }
   }, [events, activeEventId]);
+
+  useEffect(() => {
+    // Generate dynamic values after hydration to avoid mismatch
+    if (creationStage === "payment") {
+      setPaymentRef(`MW-${Math.random().toString(36).substring(7).toUpperCase()}`);
+    }
+  }, [creationStage]);
+
+  useEffect(() => {
+    if (userProfile?.subscription?.expiryDate) {
+      setExpiryLabel(`Expires: ${new Date(userProfile.subscription.expiryDate).toLocaleDateString()}`);
+    }
+  }, [userProfile]);
 
   const activeEvent = events?.find(e => e.id === activeEventId) || null;
 
@@ -487,7 +504,7 @@ export default function Dashboard() {
                         </div>
                         <div className="space-y-2">
                            <Label className="text-xs opacity-60">Payment Reference</Label>
-                           <div className="p-3 bg-white rounded-lg border font-mono text-xs text-center tracking-widest">MW-{Math.random().toString(36).substring(7).toUpperCase()}</div>
+                           <div className="p-3 bg-white rounded-lg border font-mono text-xs text-center tracking-widest">{paymentRef || "GENERATING..."}</div>
                         </div>
                         <p className="text-[10px] text-muted-foreground italic text-center">Once verified, you will have unlimited registry access for 2 months.</p>
                       </div>
@@ -543,7 +560,7 @@ export default function Dashboard() {
                 icon={<ShieldCheck className="h-5 w-5" />} 
                 title="Premium Access" 
                 value="ACTIVE" 
-                label={`Expires: ${new Date(userProfile?.subscription?.expiryDate).toLocaleDateString()}`} 
+                label={expiryLabel || "Premium Verified"} 
               />
             ) : (
               <StatStat icon={<Info className="h-5 w-5" />} title="Account Plan" value="FREE TRIAL" label="One-time offer" />
