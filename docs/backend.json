@@ -15,7 +15,7 @@
     "Event": {
       "title": "Event",
       "type": "object",
-      "description": "Represents a premium event with 3-point scanning logic and dynamic categories.",
+      "description": "Represents a premium event with 3-point scanning logic.",
       "properties": {
         "id": { "type": "string" },
         "nameEn": { "type": "string" },
@@ -24,14 +24,13 @@
         "guestCapacity": { "type": "number" },
         "categories": { 
           "type": "array", 
-          "items": { "type": "string" },
-          "description": "List of guest categories defined for this event (e.g., VIP, VVIP, Standard, Press, Staff)."
+          "items": { "type": "string" }
         },
         "eventAdminId": { "type": "string" },
         "isActive": { "type": "boolean" },
         "stats": {
           "type": "object",
-          "description": "Aggregated scan statistics per category and checkpoint."
+          "description": "Aggregated scan statistics."
         }
       },
       "required": ["id", "nameEn", "eventAdminId", "isActive"]
@@ -39,7 +38,7 @@
     "GuestEvent": {
       "title": "GuestEvent",
       "type": "object",
-      "description": "Junction record for guests and events, tracking category and scan status.",
+      "description": "Junction record for guests and events.",
       "properties": {
         "id": { "type": "string" },
         "guestId": { "type": "string" },
@@ -53,6 +52,18 @@
         "qrCodeData": { "type": "string" }
       },
       "required": ["id", "guestName", "eventId", "category", "ticketId"]
+    },
+    "StaffAssignment": {
+      "title": "StaffAssignment",
+      "type": "object",
+      "description": "Credentials and assignment for scanning staff.",
+      "properties": {
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "assignedCheckpoint": { "type": "string", "enum": ["GATE", "DRINKS", "FOOD"] },
+        "eventId": { "type": "string" }
+      },
+      "required": ["username", "password", "assignedCheckpoint", "eventId"]
     }
   },
   "auth": {
@@ -61,6 +72,7 @@
   "firestore": {
     "/users/{userId}": { "schema": "User", "description": "User profiles" },
     "/events/{eventId}": { "schema": "Event", "description": "Premium events" },
-    "/events/{eventId}/guestEvents/{guestEventId}": { "schema": "GuestEvent", "description": "Event-specific guest records" }
+    "/events/{eventId}/guestEvents/{guestEventId}": { "schema": "GuestEvent", "description": "Event-specific guest records" },
+    "/events/{eventId}/staffAssignments/{staffId}": { "schema": "StaffAssignment", "description": "Staff access control" }
   }
 }

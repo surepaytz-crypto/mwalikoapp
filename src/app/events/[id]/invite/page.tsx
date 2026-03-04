@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -41,11 +42,15 @@ export default function InvitePage() {
     for (let i = 0; i < 3; i++) {
       randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    return `${prefix}-${randomPart}`;
+    return `${prefix}${randomPart}`; // No hyphen requested
   };
 
   useEffect(() => {
+    // Generate initial ID only on client to avoid hydration error
     setTicketId(generateTicketId());
+  }, []);
+
+  useEffect(() => {
     if (event && event.categories && event.categories.length > 0 && !category) {
       setCategory(event.categories[0]);
     }
@@ -58,11 +63,6 @@ export default function InvitePage() {
   const handleShareWhatsApp = () => {
     const text = `Habari ${guestName || "Mgeni Rasmi"}! Unakaribishwa kwa furaha kwenye ${event?.nameEn}. Ukumbi: ${event?.venue}. Tarehe: ${event?.startDate ? new Date(event.startDate).toLocaleDateString() : 'TBD'}. \n\nTafadhali tumia namba yako ya tiketi kwa uhakiki: ${ticketId}\n\nAu fungua picha ya QR hapa kwa kuingia langoni. Karibu sana!`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-  };
-
-  const handleShareSMS = () => {
-    const text = `Habari ${guestName || "Mgeni Rasmi"}! Karibu ${event?.nameEn} kule ${event?.venue}. Namba ya Tiketi yako ni ${ticketId}. Usipoteze ujumbe huu.`;
-    window.open(`sms:?body=${encodeURIComponent(text)}`, '_blank');
   };
 
   const qrData = JSON.stringify({
@@ -93,9 +93,6 @@ export default function InvitePage() {
             <div className="flex flex-wrap gap-2">
               <Button onClick={handleShareWhatsApp} className="bg-green-600 hover:bg-green-700 text-white">
                 <MessageSquare className="mr-2 h-4 w-4" /> WhatsApp
-              </Button>
-              <Button onClick={handleShareSMS} className="bg-blue-600 hover:bg-blue-700 text-white">
-                <Send className="mr-2 h-4 w-4" /> SMS
               </Button>
               <Button onClick={handlePrint} className="bg-primary text-primary-foreground">
                 <Printer className="mr-2 h-4 w-4" /> Print Invitation
@@ -150,7 +147,7 @@ export default function InvitePage() {
                        <ShieldCheck className="h-6 w-6 text-accent shrink-0 mt-1" />
                        <div>
                           <p className="font-bold text-sm">3-Point Scan Policy</p>
-                          <p className="text-xs text-muted-foreground">Each guest is tracked at Gate, Drinks, and Food. Access is restricted per category.</p>
+                          <p className="text-xs text-muted-foreground">Each guest is tracked at Gate, Drinks, and Food. No mark ticket IDs are used for easy manual entry.</p>
                        </div>
                     </div>
                  </CardContent>

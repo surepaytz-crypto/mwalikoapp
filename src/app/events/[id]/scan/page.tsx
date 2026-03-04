@@ -6,14 +6,14 @@ import { useTranslation } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { QrCode, ArrowLeft, RefreshCw, CheckCircle2, XCircle, ShieldCheck, Search, Key, Info, MapPin } from "lucide-react";
+import { QrCode, ArrowLeft, RefreshCw, CheckCircle2, XCircle, ShieldCheck, Search, Key, Info, MapPin, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useFirestore, useUser } from "@/firebase";
+import { useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs, doc, updateDoc, increment } from "firebase/firestore";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 type Checkpoint = "GATE" | "DRINKS" | "FOOD";
 type ScanStatus = "idle" | "scanning" | "valid" | "invalid" | "used";
@@ -23,6 +23,8 @@ export default function ScanPage() {
   const { id: eventId } = useParams();
   const { toast } = useToast();
   const db = useFirestore();
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
   
   const [status, setStatus] = useState<ScanStatus>("idle");
   const [ticketIdInput, setTicketIdInput] = useState("");
@@ -30,6 +32,19 @@ export default function ScanPage() {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [scannedGuest, setScannedGuest] = useState<{ name: string, category: string } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Event info for validation
+  const eventRef = useMemoFirebase(() => {
+    if (!db || !eventId) return null;
+    return doc(db, "events", eventId as string);
+  }, [db, eventId]);
+  const { data: event } = useDoc(eventRef);
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, isUserLoading]);
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -97,6 +112,8 @@ export default function ScanPage() {
     }
   };
 
+  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center bg-primary"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
+
   return (
     <div className="min-h-screen bg-primary flex flex-col text-primary-foreground">
       <header className="p-4 flex items-center justify-between border-b border-white/10 bg-black/10">
@@ -107,7 +124,7 @@ export default function ScanPage() {
         </Link>
         <div className="text-center">
           <h1 className="font-headline text-xl font-bold">Mwaliko Scanner</h1>
-          <p className="text-[10px] uppercase tracking-widest opacity-60">Certified Entry Verification</p>
+          <p className="text-[10px] uppercase tracking-widest opacity-60">{event?.nameEn || "Checking Registry"}</p>
         </div>
         <div className="w-10"></div>
       </header>
@@ -217,7 +234,7 @@ export default function ScanPage() {
             <div className="flex gap-2">
               <Input 
                 className="bg-white/10 border-white/30 text-white h-14 rounded-xl text-lg placeholder:text-white/20" 
-                placeholder="Ticket ID (e.g. MW-123)"
+                placeholder="Ticket ID (e.g. MW123)"
                 value={ticketIdInput}
                 onChange={(e) => setTicketIdInput(e.target.value)}
               />
@@ -226,6 +243,14 @@ export default function ScanPage() {
               </Button>
             </div>
           </div>
+
+          <Button 
+            className="w-full h-14 bg-accent text-accent-foreground hover:bg-accent/90 rounded-xl uppercase font-bold text-lg shadow-xl"
+            onClick={handleManualCheck}
+            disabled={status === "scanning"}
+          >
+            {status === "scanning" ? <Loader2 className="animate-spin" /> : "Verify Scan"}
+          </Button>
 
           <Button 
             variant="outline" 
