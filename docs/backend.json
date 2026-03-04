@@ -8,7 +8,18 @@
       "properties": {
         "id": { "type": "string" },
         "email": { "type": "string", "format": "email" },
-        "userRole": { "type": "string", "enum": ["SuperAdmin", "EventAdmin", "ScannerStaff"] }
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "userRole": { "type": "string", "enum": ["SuperAdmin", "EventAdmin", "ScannerStaff"] },
+        "subscription": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["Free", "Premium"] },
+            "expiryDate": { "type": "string", "format": "date-time" },
+            "paidAt": { "type": "string", "format": "date-time" }
+          }
+        }
       },
       "required": ["id", "email", "userRole"]
     },
@@ -28,7 +39,7 @@
         "eventAdminId": { "type": "string" },
         "isActive": { "type": "boolean" },
         "isPaid": { "type": "boolean" },
-        "packageType": { "type": "string", "enum": ["Standard", "Classic", "Premium"] },
+        "packageType": { "type": "string", "enum": ["Free", "Premium"] },
         "guestLimit": { "type": "number" },
         "stats": { "type": "object" },
         "invitedTotals": { "type": "object" },

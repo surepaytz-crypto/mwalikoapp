@@ -1,27 +1,33 @@
+
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, useFirestore } from "@/firebase";
 import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail
 } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Sparkles, LogIn, Shield, UserCircle } from "lucide-react";
+import { Loader2, Sparkles, LogIn, Shield, UserCircle, Key } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResetLoading, setIsResetLoading] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+
   // Staff login state
   const [staffUsername, setStaffUsername] = useState("");
   const [staffPassword, setStaffPassword] = useState("");
@@ -47,9 +53,12 @@ export default function LoginPage() {
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
       const userDoc = await getDoc(doc(db, "users", cred.user.uid));
+      
+      // Safety check for user role if missing
       if (!userDoc.exists()) {
         await provisionUserRole(cred.user.uid, "EventAdmin", email);
       }
+      
       router.push("/dashboard");
     } catch (error: any) {
       toast({
@@ -84,39 +93,29 @@ export default function LoginPage() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!resetEmail) {
+      toast({ variant: "destructive", title: "Email Required", description: "Please enter your email to reset password." });
+      return;
+    }
+    setIsResetLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      toast({ title: "Reset Email Sent", description: "Check your inbox for password reset instructions." });
+      setIsResetDialogOpen(false);
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    } finally {
+      setIsResetLoading(false);
+    }
+  };
+
   const handleDemoAdmin = async () => {
     setLoading(true);
     const demoEmail = "demo@mwaliko.com";
     const demoPassword = "password123";
     try {
-      let cred;
-      try {
-        cred = await signInWithEmailAndPassword(auth, demoEmail, demoPassword);
-      } catch (e) {
-        cred = await createUserWithEmailAndPassword(auth, demoEmail, demoPassword);
-      }
-      await provisionUserRole(cred.user.uid, "EventAdmin", demoEmail);
-      router.push("/dashboard");
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Demo Failed", description: "Access error" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDemoStaff = async () => {
-    setLoading(true);
-    const demoUsername = "demo_staff";
-    const demoPassword = "password123";
-    const staffEmail = `${demoUsername}@staff.mwaliko.com`;
-    try {
-      let cred;
-      try {
-        cred = await signInWithEmailAndPassword(auth, staffEmail, demoPassword);
-      } catch (e) {
-        cred = await createUserWithEmailAndPassword(auth, staffEmail, demoPassword);
-      }
-      await provisionUserRole(cred.user.uid, "ScannerStaff", staffEmail);
+      const cred = await signInWithEmailAndPassword(auth, demoEmail, demoPassword);
       router.push("/dashboard");
     } catch (error: any) {
       toast({ variant: "destructive", title: "Demo Failed", description: "Access error" });
@@ -151,10 +150,35 @@ export default function LoginPage() {
                     <Input id="email" type="email" placeholder="admin@mwaliko.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="password">Password</Label>
+                      <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+                        <DialogTrigger asChild>
+                          <button type="button" className="text-xs text-accent font-bold hover:underline">Forgot Password?</button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Reset Password</DialogTitle>
+                            <DialogDescription>Enter your email and we'll send you a link to reset your password.</DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="reset-email">Email Address</Label>
+                              <Input id="reset-email" type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="your@email.com" />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>Cancel</Button>
+                            <Button onClick={handleForgotPassword} disabled={isResetLoading}>
+                              {isResetLoading ? <Loader2 className="animate-spin" /> : "Send Reset Link"}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                     <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                   </div>
-                  <Button type="submit" className="w-full bg-primary" disabled={loading}>
+                  <Button type="submit" className="w-full bg-primary h-12" disabled={loading}>
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
                     Admin Sign In
                   </Button>
@@ -171,18 +195,18 @@ export default function LoginPage() {
                     <Label htmlFor="staff-password">Password</Label>
                     <Input id="staff-password" type="password" value={staffPassword} onChange={(e) => setStaffPassword(e.target.value)} required />
                   </div>
-                  <Button type="submit" className="w-full bg-accent text-accent-foreground" disabled={loading}>
+                  <Button type="submit" className="w-full bg-accent text-accent-foreground h-12" disabled={loading}>
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Shield className="h-4 w-4 mr-2" />}
                     Staff Sign In
                   </Button>
-                  <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest pt-4">
-                    Staff credentials provided by your Event Admin
-                  </p>
                 </form>
               </TabsContent>
             </Tabs>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
+            <div className="text-sm text-center text-muted-foreground">
+              New Admin? <Link href="/register" className="text-accent font-bold hover:underline">Create an account</Link>
+            </div>
             <div className="relative w-full">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
@@ -196,7 +220,7 @@ export default function LoginPage() {
                 <Sparkles className="h-4 w-4 mr-2" />
                 Demo Admin
               </Button>
-              <Button variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20" onClick={handleDemoStaff} disabled={loading}>
+              <Button variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20" onClick={() => router.push("/login")} disabled={loading}>
                 <UserCircle className="h-4 w-4 mr-2" />
                 Demo Staff
               </Button>

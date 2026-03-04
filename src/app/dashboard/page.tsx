@@ -3,8 +3,8 @@
 
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check, Info, ArrowRight, ShieldCheck } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check, Info, ArrowRight, ShieldCheck, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc } from "@/firebase";
@@ -344,6 +344,40 @@ export default function Dashboard() {
   if (isUserLoading || eventsLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
   if (!user) return null;
 
+  // Email Verification Guard
+  if (userProfile?.userRole === "EventAdmin" && !user.emailVerified) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto flex flex-col items-center justify-center p-4 py-20">
+          <Card className="w-full max-w-md border-none shadow-2xl bg-card/50 backdrop-blur text-center">
+            <CardHeader>
+              <div className="mx-auto w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mb-4">
+                <Mail className="h-8 w-8 text-accent animate-bounce" />
+              </div>
+              <CardTitle className="text-2xl font-headline font-bold text-primary">Verify Your Email</CardTitle>
+              <CardDescription>
+                Access to the Mwaliko Dashboard is locked until you verify your email address. 
+                Please check <strong>{user.email}</strong> for the verification link.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="p-4 bg-muted/50 rounded-xl border space-y-2 text-sm">
+                <p className="font-semibold">Didn't receive the email?</p>
+                <p className="opacity-70">Check your spam folder or wait a few minutes. You may need to refresh this page after clicking the link in your email.</p>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={() => window.location.reload()} className="w-full bg-accent text-accent-foreground">
+                I've Verified My Email
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   const currentGuestCount = activeEvent ? Object.values(activeEvent.invitedTotals || {}).reduce((a: number, b: any) => a + (b || 0), 0) as number : 0;
   const guestLimit = activeEvent?.guestLimit || 200;
 
@@ -358,7 +392,7 @@ export default function Dashboard() {
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="font-headline text-3xl font-bold text-primary">{t('dashboard')}</h1>
-              <p className="text-muted-foreground">Premium Event Registry &bull; {user.email}</p>
+              <p className="text-muted-foreground">Premium Event Registry &bull; {userProfile?.firstName} {userProfile?.lastName}</p>
             </div>
             <div className="flex gap-2">
               <Dialog open={isModalOpen} onOpenChange={(open) => {
@@ -673,7 +707,7 @@ export default function Dashboard() {
                         </div>
                         <div className="space-y-2">
                           <Label>{t('staffUsername')}</Label>
-                          <Input value={staffUsername} onChange={(e) => setStaffUsername(setStaffUsername)} placeholder="e.g. juma_gate" />
+                          <Input value={staffUsername} onChange={(e) => setStaffUsername(e.target.value)} placeholder="e.g. juma_gate" />
                         </div>
                         <div className="space-y-2">
                           <Label>{t('staffPassword')}</Label>
