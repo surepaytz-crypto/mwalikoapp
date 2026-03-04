@@ -24,7 +24,7 @@ export default function InvitePage() {
   
   const [guestName, setGuestName] = useState("");
   const [category, setCategory] = useState("");
-  const [ticketId, setTicketId] = useState(`MW-${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
+  const [ticketId, setTicketId] = useState(""); // Initialize empty to avoid hydration mismatch
   const invitationRef = useRef<HTMLDivElement>(null);
 
   const eventRef = useMemoFirebase(() => {
@@ -34,18 +34,19 @@ export default function InvitePage() {
 
   const { data: event, isLoading } = useDoc(eventRef);
 
+  // Set initial random ticket ID and category on client-side mount
   useEffect(() => {
+    setTicketId(`MW-${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
     if (event && event.categories && event.categories.length > 0 && !category) {
       setCategory(event.categories[0]);
     }
-  }, [event, category]);
+  }, [event]);
 
   const handlePrint = () => {
     window.print();
   };
 
   const handleShareWhatsApp = () => {
-    // Specialized Swahili Template for Tanzanian Clients
     const text = `Habari ${guestName || "Mgeni Rasmi"}! Unakaribishwa kwa furaha kwenye ${event?.nameEn}. Ukumbi: ${event?.venue}. Tarehe: ${event?.startDate ? new Date(event.startDate).toLocaleDateString() : 'TBD'}. \n\nTafadhali tumia namba yako ya tiketi kwa uhakiki: ${ticketId}\n\nAu fungua picha ya QR hapa kwa kuingia langoni. Karibu sana!`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -183,17 +184,19 @@ export default function InvitePage() {
                 </div>
 
                 <div className="p-4 bg-white border-2 border-primary/10 rounded-xl shadow-lg">
-                  <QRCodeSVG 
-                    value={qrData} 
-                    size={200} 
-                    level={"H"}
-                    includeMargin={true}
-                  />
+                  {ticketId && (
+                    <QRCodeSVG 
+                      value={qrData} 
+                      size={200} 
+                      level={"H"}
+                      includeMargin={true}
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">{t('ticketId')}</p>
-                  <p className="text-xl font-mono font-bold text-primary tracking-wider">{ticketId}</p>
+                  <p className="text-xl font-mono font-bold text-primary tracking-wider">{ticketId || "GENERATING..."}</p>
                 </div>
 
                 <footer className="pt-8 border-t border-black/5 w-full">
