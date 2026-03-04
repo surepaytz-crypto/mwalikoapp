@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useTranslation } from "@/context/LanguageContext";
@@ -351,7 +352,7 @@ export default function Dashboard() {
         <div className="container mx-auto flex flex-col items-center justify-center p-4 py-20">
           <Card className="w-full max-w-lg border-none shadow-[0_35px_60px_-15px_rgba(0,0,0,0.1)] bg-card overflow-hidden">
              <div className="bg-primary p-8 text-center">
-                <h2 className="text-accent font-headline text-3xl font-bold tracking-[0.2em]">MWALIKO</h2>
+                <h2 className="text-accent font-headline text-3xl font-bold tracking-[0.2em]">MWALIKO APP</h2>
              </div>
             <CardHeader className="text-center pb-2">
               <div className="mx-auto w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center mb-6">
@@ -359,7 +360,7 @@ export default function Dashboard() {
               </div>
               <CardTitle className="text-3xl font-headline font-bold text-primary">Activation Required</CardTitle>
               <CardDescription className="text-lg mt-2">
-                Welcome to Mwaliko, <strong>{userProfile?.firstName}</strong>.
+                Welcome to Mwaliko App, <strong>{userProfile?.firstName}</strong>.
               </CardDescription>
             </CardHeader>
             <CardContent className="px-10 pb-10 text-center space-y-6">
@@ -371,7 +372,7 @@ export default function Dashboard() {
               <div className="p-6 bg-muted/30 rounded-2xl border border-dashed border-muted-foreground/20 space-y-4">
                 <div className="flex items-center gap-4 text-left">
                   <ShieldCheck className="h-8 w-8 text-accent shrink-0" />
-                  <p className="text-xs italic opacity-70 italic">
+                  <p className="text-sm italic opacity-70 italic">
                     "At 360 Digital, your security and event integrity are our highest priority. This verification ensures your administrative access remains exclusive."
                   </p>
                 </div>
@@ -783,7 +784,7 @@ export default function Dashboard() {
                    <p className="text-sm mt-2">{new Date().toLocaleString()}</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-accent">Mwaliko.</div>
+                  <div className="text-2xl font-bold text-accent">Mwaliko App.</div>
                   <p className="text-xs opacity-50">Premium Event Management</p>
                 </div>
               </div>

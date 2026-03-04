@@ -38,7 +38,7 @@ export function Navbar() {
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center space-x-2">
             <span className="font-headline text-2xl font-bold tracking-tighter text-primary">
-              Mwaliko<span className="text-accent">.</span>
+              Mwaliko App<span className="text-accent">.</span>
             </span>
           </Link>
           {!isStaff && (

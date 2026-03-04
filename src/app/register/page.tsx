@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -126,7 +127,7 @@ export default function RegisterPage() {
         <div className="container mx-auto flex flex-col items-center justify-center p-4 py-20">
           <Card className="w-full max-w-lg border-none shadow-[0_35px_60px_-15px_rgba(0,0,0,0.2)] bg-card overflow-hidden">
              <div className="bg-primary p-10 text-center">
-                <h2 className="text-accent font-headline text-4xl font-bold tracking-[0.2em]">MWALIKO</h2>
+                <h2 className="text-accent font-headline text-4xl font-bold tracking-[0.2em]">MWALIKO APP</h2>
              </div>
             <CardHeader className="text-center pt-10">
               <div className="mx-auto w-24 h-24 bg-accent/10 rounded-full flex items-center justify-center mb-6 border border-accent/20">
@@ -248,7 +249,7 @@ export default function RegisterPage() {
                         </section>
                         <section>
                           <h4 className="font-bold text-foreground">3. Digital Invitations</h4>
-                          <p>Mwaliko provides digital invitation designs. Users are responsible for reviewing invitation content and layout before sharing with guests via WhatsApp or other channels.</p>
+                          <p>Mwaliko App provides digital invitation designs. Users are responsible for reviewing invitation content and layout before sharing with guests via WhatsApp or other channels.</p>
                         </section>
                         <section>
                           <h4 className="font-bold text-foreground">4. Data Privacy</h4>
