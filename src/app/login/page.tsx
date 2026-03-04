@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
   signInWithPopup,
-  GoogleAuthProvider
+  GoogleAuthProvider,
+  UserCredential
 } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,8 +26,27 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const auth = useAuth();
+  const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+
+  const provisionUserRole = async (userUid: string) => {
+    if (!db) return;
+    // Explicitly grant EventAdmin role for the demo user or new signups
+    // This satisfies exists(/databases/$(database)/documents/roles_eventAdmins/$(request.auth.uid))
+    await setDoc(doc(db, "roles_eventAdmins", userUid), {
+      assignedAt: new Date().toISOString(),
+      active: true
+    }, { merge: true });
+
+    // Also create basic user profile
+    await setDoc(doc(db, "users", userUid), {
+      id: userUid,
+      email: email || "demo@mwaliko.com",
+      userRole: "EventAdmin",
+      createdAt: new Date().toISOString()
+    }, { merge: true });
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,14 +73,14 @@ export default function LoginPage() {
     const demoPassword = "password123";
 
     try {
-      // First, try to sign in
-      await signInWithEmailAndPassword(auth, demoEmail, demoPassword);
+      const cred = await signInWithEmailAndPassword(auth, demoEmail, demoPassword);
+      await provisionUserRole(cred.user.uid);
       router.push("/dashboard");
     } catch (error: any) {
-      // If sign in fails, try to create the account (it might be the first run)
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
         try {
-          await createUserWithEmailAndPassword(auth, demoEmail, demoPassword);
+          const cred = await createUserWithEmailAndPassword(auth, demoEmail, demoPassword);
+          await provisionUserRole(cred.user.uid);
           router.push("/dashboard");
         } catch (createError: any) {
           setAuthError(`Demo access failed: ${createError.message}. Make sure Email/Password auth is enabled in your Firebase Console.`);
@@ -75,7 +96,8 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const cred = await signInWithPopup(auth, provider);
+      await provisionUserRole(cred.user.uid);
       router.push("/dashboard");
     } catch (error: any) {
       toast({

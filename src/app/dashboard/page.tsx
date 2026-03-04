@@ -7,7 +7,7 @@ import { Users, Calendar, QrCode, CheckCircle2, Loader2, Plus, AlertCircle } fro
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, addDoc, serverTimestamp } from "firebase/firestore";
 import { useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -18,29 +18,35 @@ export default function Dashboard() {
   const { user, loading: authLoading } = useUser();
   const router = useRouter();
 
-  // Protect the route
-  useEffect(() => {
-    if (!authLoading && !user && db) {
-      router.push("/login");
-    }
-  }, [user, authLoading, router, db]);
-
-  // Create a stable reference for the events collection
-  const eventsCollectionRef = useMemoFirebase(() => (db ? collection(db, "events") : null), [db]);
+  // Create a stable reference for the events collection filtered by the user's ID
+  // This is required to satisfy Firestore Security Rules for 'list' operations
+  const eventsCollectionRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(collection(db, "events"), where("eventAdminId", "==", user.uid));
+  }, [db, user]);
+  
   const { data: events, loading, error } = useCollection(eventsCollectionRef);
 
   const handleCreateMockEvent = () => {
-    if (!db) return;
+    if (!db || !user) return;
+    
+    // Using eventAdminId to match security rules and schema
     addDoc(collection(db, "events"), {
       name: "Luxury Gala Night",
+      nameEn: "Luxury Gala Night",
+      nameSw: "Usiku wa Fahari",
       type: "Gala",
-      date: new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0], // Next week
+      startDate: new Date(Date.now() + 86400000 * 7).toISOString(), 
+      endDate: new Date(Date.now() + 86400000 * 7 + 3600000 * 4).toISOString(),
+      venueId: "mock-venue-id",
       venue: "Serena Hotel Ballroom",
       status: "Planning",
+      guestCapacity: 150,
       guestCount: 150,
       scannedCount: 0,
+      isActive: true,
       createdAt: serverTimestamp(),
-      createdBy: user?.uid,
+      eventAdminId: user.uid,
     });
   };
 
@@ -53,6 +59,12 @@ export default function Dashboard() {
     }), { totalEvents: 0, totalGuests: 0, totalScanned: 0 });
   }, [events]);
 
+  useEffect(() => {
+    if (!authLoading && !user && db) {
+      router.push("/login");
+    }
+  }, [user, authLoading, router, db]);
+
   if (!db) {
     return (
       <div className="min-h-screen bg-background">
@@ -62,7 +74,7 @@ export default function Dashboard() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Firebase Not Connected</AlertTitle>
             <AlertDescription>
-              The dashboard requires a connected Firebase project to function. Please click <strong>Link Project</strong> in the Studio toolbar above.
+              The dashboard requires a connected Firebase project to function.
             </AlertDescription>
           </Alert>
         </main>
@@ -119,7 +131,7 @@ export default function Dashboard() {
 
           {error && (
             <div className="p-4 bg-destructive/10 text-destructive rounded-lg border border-destructive/20 text-center">
-              Error loading events. Please check your permissions.
+              Error loading events. Please ensure you have permission to view this content.
             </div>
           )}
 
@@ -137,10 +149,10 @@ export default function Dashboard() {
               <EventItem 
                 key={event.id}
                 id={event.id}
-                name={event.name}
-                date={event.date}
+                name={event.nameEn || event.name || "Untitled Event"}
+                date={event.startDate ? new Date(event.startDate).toLocaleDateString() : (event.date || "TBD")}
                 guests={event.guestCount?.toString() || "0"}
-                status={event.status}
+                status={event.status || "Planning"}
               />
             ))}
           </div>
