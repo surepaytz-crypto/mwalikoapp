@@ -1,4 +1,3 @@
-
 export const translations = {
   en: {
     appName: "Mwaliko App",
@@ -82,7 +81,7 @@ export const translations = {
     eventLimitDescription: "Free trial accounts are limited to one active event. Upgrade to Premium for unlimited events.",
     priceFree: "0 TZS",
     pricePremium: "350,000 TZS",
-    includesWhatsapp: "Includes WhatsApp & Image Rendering",
+    includesWhatsapp: "Includes WhatsApp & Digital Designer",
   },
   sw: {
     appName: "Mwaliko App",
@@ -166,7 +165,7 @@ export const translations = {
     eventLimitDescription: "Akaunti ya jaribio ina kikomo cha tukio moja tu. Badilisha kwenda Premium kwa matukio bila kikomo.",
     priceFree: "0 TZS",
     pricePremium: "350,000 TZS",
-    includesWhatsapp: "Pamolinga na WhatsApp na Bango la AI",
+    includesWhatsapp: "Pamoja na WhatsApp na Designer ya Digital",
   }
 };
 

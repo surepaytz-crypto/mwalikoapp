@@ -33,7 +33,7 @@ interface PlanConfig {
 
 const PLANS: PlanConfig[] = [
   { type: "Free", limit: 200, price: "0 TZS", duration: "1 Month", name: "Free Trial" },
-  { type: "Premium", limit: 999999, price: "100,000 TZS", duration: "3 Months", name: "Premium Package" },
+  { type: "Premium", limit: 999999, price: "350,000 TZS", duration: "2 Months", name: "Premium Package" },
 ];
 
 export default function Dashboard() {
@@ -43,7 +43,7 @@ export default function Dashboard() {
   const router = useRouter();
   const { toast } = useToast();
   
-  const [activeEventId, setActiveEventId] = useState<string | null>(null);
+  const [activeEventId, setactiveEventId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [reportGuests, setReportGuests] = useState<any[]>([]);
@@ -87,7 +87,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (events && events.length > 0 && !activeEventId) {
-      setActiveEventId(events[0].id);
+      setactiveEventId(events[0].id);
     }
   }, [events, activeEventId]);
 
@@ -139,7 +139,7 @@ export default function Dashboard() {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       const expiry = new Date();
-      expiry.setMonth(expiry.getMonth() + 3);
+      expiry.setMonth(expiry.getMonth() + 2); // 2 months as per request
 
       await updateDoc(doc(db, "users", user.uid), {
         subscription: {
@@ -150,7 +150,7 @@ export default function Dashboard() {
       });
       
       setCreationStage("details");
-      toast({ title: "Payment Verified", description: "You now have 3 months of unlimited Premium access!" });
+      toast({ title: "Payment Verified", description: "You now have 2 months of unlimited Premium access!" });
     } finally {
       setIsProcessingPayment(false);
     }
@@ -181,7 +181,7 @@ export default function Dashboard() {
       };
       
       const docRef = await addDoc(collection(db, "events"), newEvent);
-      setActiveEventId(docRef.id);
+      setactiveEventId(docRef.id);
       setIsModalOpen(false);
       toast({ title: "Event Created", description: `${eventName} registry is now live!` });
     } finally {
@@ -209,7 +209,7 @@ export default function Dashboard() {
     if (!db || !activeEventId) return;
     try {
       await deleteDoc(doc(db, "events", activeEventId));
-      setActiveEventId(null);
+      setactiveEventId(null);
       toast({ title: "Event Deleted", description: "The registry has been removed." });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Delete Failed", description: e.message });
@@ -439,7 +439,7 @@ export default function Dashboard() {
                                   <Check className="h-3 w-3 text-green-500" /> {plan.limit === 999999 ? "Unlimited" : plan.limit} Guest Cards
                                 </div>
                                 <div className="flex items-center gap-2 text-[11px] font-medium">
-                                  <Check className="h-3 w-3 text-green-500" /> AI Invitation Designer
+                                  <Check className="h-3 w-3 text-green-500" /> Digital Invitation Designer
                                 </div>
                                 <div className="flex items-center gap-2 text-[11px] font-medium">
                                   <Check className="h-3 w-3 text-green-500" /> 3-Point Security Scan
@@ -467,19 +467,19 @@ export default function Dashboard() {
                       <DialogHeader>
                         <DialogTitle>Verify Payment Access</DialogTitle>
                         <DialogDescription>
-                          Complete activation for your <strong>Premium Package</strong> (100,000 TZS).
+                          Complete activation for your <strong>Premium Package</strong> (350,000 TZS).
                         </DialogDescription>
                       </DialogHeader>
                       <div className="bg-muted/50 p-6 rounded-2xl border text-left space-y-4">
                         <div className="flex justify-between items-center pb-2 border-b">
                            <span className="text-sm font-medium">Total Due</span>
-                           <span className="text-xl font-bold text-accent">100,000 TZS</span>
+                           <span className="text-xl font-bold text-accent">350,000 TZS</span>
                         </div>
                         <div className="space-y-2">
                            <Label className="text-xs opacity-60">Payment Reference</Label>
                            <div className="p-3 bg-white rounded-lg border font-mono text-xs text-center tracking-widest">MW-{Math.random().toString(36).substring(7).toUpperCase()}</div>
                         </div>
-                        <p className="text-[10px] text-muted-foreground italic text-center">Once verified, you will have unlimited registry access for 3 months.</p>
+                        <p className="text-[10px] text-muted-foreground italic text-center">Once verified, you will have unlimited registry access for 2 months.</p>
                       </div>
                       <div className="flex gap-3">
                          <Button variant="outline" className="flex-1" onClick={() => setCreationStage("plans")}>Go Back</Button>
@@ -527,7 +527,7 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
             <StatStat icon={<Calendar className="h-5 w-5" />} title={t('events')} value={events?.length.toString() || "0"} label="Total Created" />
-            <StatStat icon={<Sparkles className="h-5 w-5" />} title="AI Rendered" value={currentGuestCount.toString()} label="Invitations Ready" />
+            <StatStat icon={<Sparkles className="h-5 w-5" />} title="Digital Invites" value={currentGuestCount.toString()} label="Invitations Ready" />
             <StatStat icon={<Users className="h-5 w-5" />} title="Total Capacity" value={events?.reduce((acc, e) => acc + (e.guestLimit || 0), 0).toString() || "0"} label="Registered Scale" />
             <StatStat icon={<ShieldCheck className="h-5 w-5" />} title="Security Status" value={hasActivePremium ? "PREMIUM" : "STANDARD"} label={hasActivePremium ? "Unlimited Access" : "Trial Active"} />
           </div>
@@ -545,7 +545,7 @@ export default function Dashboard() {
                         ? "bg-primary text-primary-foreground shadow-lg border-primary" 
                         : "bg-background text-foreground border-input hover:bg-accent/10"
                     )}
-                    onClick={() => setActiveEventId(e.id)}
+                    onClick={() => setactiveEventId(e.id)}
                   >
                     <span className="text-sm font-bold whitespace-nowrap">
                       {e.shortId} &bull; {e.nameEn}

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -19,7 +18,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { aiWhatsappInvitationGenerator } from "@/ai/flows/ai-whatsapp-invitation-generator";
 
 type TemplateId = "royal-gold" | "modern-minimal" | "garden-floral" | "arch-romantic" | "send-off" | "mchango" | "white-gold" | "soft-blush" | "heritage" | "minimal-formal";
 
@@ -193,58 +191,23 @@ export default function InvitePage() {
     const name = guestName || "Mgeni Rasmi";
     const eventNameText = event?.nameEn || "tukio letu";
     const cat = category || "STANDARD";
+    const venue = event?.venue || "Venue TBD";
+    const date = event?.startDate ? new Date(event.startDate).toLocaleDateString() : "TBD";
     
-    const whatsappMessage = `Habari ${name}, Karibu kwenye ${eventNameText}\n\nTICKET ID: ${ticketId}\nCATEGORY: ${cat}\n\nAsante na karibu sana.\n\nCard Powered by 360 Digital. TEL: 0614 320 858`;
+    // Construct a rich message manually since AI rendering is disabled
+    const whatsappMessage = `Habari *${name}*,\n\nUnaalikwa kwa furaha kwenye *${eventNameText}*.\n\n📅 Tarehe: ${date}\n📍 Ukumbi: ${venue}\n\n🎟 *TICKET ID: ${ticketId}*\n🏷 Kundi: ${cat}\n\nRSVP: ${rsvpText}\n\nAsante na karibu sana.\n\n_Mwaliko Premium Registry_`;
     
     try {
-      const qrCanvas = qrCanvasRef.current;
-      if (!qrCanvas) throw new Error("QR Canvas not found");
-      const qrDataUri = qrCanvas.toDataURL("image/png");
-
-      const template = TEMPLATES.find(t => t.id === selectedTemplate);
-      const aiResponse = await aiWhatsappInvitationGenerator({
-        eventName: event?.nameEn || "Event",
-        eventType: event?.nameEn.includes("Harusi") ? "Wedding" : "Event",
-        eventDate: event?.startDate ? new Date(event.startDate).toLocaleDateString() : "TBD",
-        eventTime: "7:00 PM",
-        eventVenue: event?.venue || "Venue TBD",
-        guestName: name,
-        desiredTone: "luxurious",
-        brandingDescription: template?.description || "Elegant and premium",
-        thematicElements: template?.name || "Premium celebration",
-        qrCodeImage: qrDataUri
-      });
-
-      const response = await fetch(aiResponse.invitationCardImageUrl);
-      const blob = await response.blob();
-      const file = new File([blob], `invitation-${ticketId}.png`, { type: 'image/png' });
-
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: `Invitation for ${name}`,
-          text: whatsappMessage,
-        });
-      } else {
-        const link = document.createElement('a');
-        link.href = aiResponse.invitationCardImageUrl;
-        link.download = `Invitation_${name.replace(/\s+/g, '_')}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        window.open(`https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
-        toast({ title: "Sharing Support", description: "Card downloaded. Send the image manually to WhatsApp." });
-      }
+      // Direct WA sharing as AI rendering is removed
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
+      window.open(waUrl, '_blank');
+      toast({ title: "WhatsApp Shared", description: "Invitation message sent to WhatsApp." });
     } catch (e: any) {
       console.error(e);
-      const isQuotaError = e.message?.includes('AI service is currently busy') || e.message?.includes('429');
       toast({ 
         variant: "destructive", 
-        title: isQuotaError ? "Service Busy" : "Share Failed", 
-        description: isQuotaError 
-          ? e.message 
-          : "Could not generate invitation image. Please check your connection." 
+        title: "Share Failed", 
+        description: "Could not open WhatsApp. Please try again." 
       });
     } finally {
       setIsSharing(false);
