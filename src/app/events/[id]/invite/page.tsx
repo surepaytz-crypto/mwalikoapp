@@ -151,28 +151,38 @@ export default function InvitePage() {
         return;
       }
 
-      const headers = ["Guest Name", "Category", "Ticket ID", "Phone Number"];
+      const eventNameText = event?.nameEn || "tukio letu";
+      const venue = event?.venue || "Venue TBD";
+      const date = event?.startDate ? new Date(event.startDate).toLocaleDateString() : "TBD";
+
+      const headers = ["Guest Name", "Category", "Ticket ID", "Phone Number", "WhatsApp Invitation Link"];
       const csvContent = [
         headers.join(","),
-        ...guests.map(g => [
-          `"${g.guestName}"`,
-          `"${g.category}"`,
-          `"${g.ticketId}"`,
-          `"${g.phoneNumber || ''}"`
-        ].join(","))
+        ...guests.map(g => {
+          const waMsg = `Habari *${g.guestName}*,\n\nUnaalikwa kwa furaha kwenye *${eventNameText}*.\n\n📅 Tarehe: ${date}\n📍 Ukumbi: ${venue}\n\n🎟 *TICKET ID: ${g.ticketId}*\n🏷 Kundi: ${g.category}\n\nRSVP: ${rsvpText}\n\nAsante na karibu sana.`;
+          const waLink = `https://wa.me/${g.phoneNumber?.replace(/\D/g, '') || ''}?text=${encodeURIComponent(waMsg)}`;
+          
+          return [
+            `"${g.guestName}"`,
+            `"${g.category}"`,
+            `"${g.ticketId}"`,
+            `"${g.phoneNumber || ''}"`,
+            `"${waLink}"`
+          ].join(",");
+        })
       ].join("\n");
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      link.setAttribute("download", `Registry_${event?.shortId || id}.csv`);
+      link.setAttribute("download", `Registry_Bulk_Share_${event?.shortId || id}.csv`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
-      toast({ title: "CSV Downloaded", description: "Full guest list with Ticket IDs exported." });
+      toast({ title: "Registry Exported", description: "Full guest list with WhatsApp Bulk links ready." });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Export Failed", description: e.message });
     } finally {
@@ -194,11 +204,9 @@ export default function InvitePage() {
     const venue = event?.venue || "Venue TBD";
     const date = event?.startDate ? new Date(event.startDate).toLocaleDateString() : "TBD";
     
-    // Construct a rich message manually since AI rendering is disabled
     const whatsappMessage = `Habari *${name}*,\n\nUnaalikwa kwa furaha kwenye *${eventNameText}*.\n\n📅 Tarehe: ${date}\n📍 Ukumbi: ${venue}\n\n🎟 *TICKET ID: ${ticketId}*\n🏷 Kundi: ${cat}\n\nRSVP: ${rsvpText}\n\nAsante na karibu sana.\n\n_Mwaliko Premium Registry_`;
     
     try {
-      // Direct WA sharing as AI rendering is removed
       const waUrl = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
       window.open(waUrl, '_blank');
       toast({ title: "WhatsApp Shared", description: "Invitation message sent to WhatsApp." });

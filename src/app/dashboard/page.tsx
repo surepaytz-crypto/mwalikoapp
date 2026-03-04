@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useTranslation } from "@/context/LanguageContext";
@@ -136,12 +135,9 @@ export default function Dashboard() {
     if (!db || !user) return;
     setIsProcessingPayment(true);
     try {
-      // Simulate real payment delay
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
       const expiry = new Date();
-      expiry.setMonth(expiry.getMonth() + 2); // 2 months as per request
-
+      expiry.setMonth(expiry.getMonth() + 2);
       await updateDoc(doc(db, "users", user.uid), {
         subscription: {
           type: "Premium",
@@ -149,7 +145,6 @@ export default function Dashboard() {
           paidAt: new Date().toISOString()
         }
       });
-      
       setCreationStage("details");
       toast({ title: "Payment Verified", description: "You now have 2 months of unlimited Premium access!" });
     } finally {
@@ -163,7 +158,6 @@ export default function Dashboard() {
     try {
       const plan = PLANS.find(p => p.type === selectedPlan)!;
       const shortId = generateShortId();
-      
       const newEvent = {
         shortId,
         nameEn: eventName,
@@ -180,7 +174,6 @@ export default function Dashboard() {
         invitedTotals: {},
         createdAt: new Date().toISOString()
       };
-      
       const docRef = await addDoc(collection(db, "events"), newEvent);
       setactiveEventId(docRef.id);
       setIsModalOpen(false);
@@ -225,15 +218,12 @@ export default function Dashboard() {
 
   const handleCsvSimulation = async (eventId: string, mode: "new" | "finished" = "new") => {
     if (!db || !activeEvent) return;
-    
     const currentCount = Object.values(activeEvent.invitedTotals || {}).reduce((a: number, b: any) => a + (b || 0), 0) as number;
     const limit = activeEvent.guestLimit || 200;
-    
     if (currentCount >= limit && activeEvent.packageType === "Free") {
       toast({ variant: "destructive", title: t('limitReached'), description: t('upgradePlan') });
       return;
     }
-
     setIsUploading(true);
     const mockData = [
       { ticketId: "ML0IQ", name: "Hon. Kassim Majaliwa", category: "VVIP", phone: "255712345678" },
@@ -247,25 +237,20 @@ export default function Dashboard() {
       { ticketId: "ML404", name: "Hon. Samia Suluhu", category: "VVIP", phone: "255700112233" },
       { ticketId: "ML505", name: "Diamond Platnumz", category: "VIP", phone: "255711000111" },
     ];
-
     try {
       const categories = Array.from(new Set(mockData.map(item => item.category)));
       const categoryScans: Record<string, any> = {};
-
       mockData.forEach(item => {
         if (!categoryScans[item.category]) {
           categoryScans[item.category] = { gate: 0, drinks: 0, food: 0, total: 0 };
         }
         categoryScans[item.category].total++;
       });
-
       const batch = writeBatch(db);
-      
       mockData.forEach((item) => {
         const isScanned = mode === "finished" ? Math.random() > 0.2 : false;
         const scanDrinks = mode === "finished" ? isScanned && Math.random() > 0.3 : false;
         const scanFood = mode === "finished" ? isScanned && Math.random() > 0.4 : false;
-
         const guestRef = doc(collection(db, "events", eventId, "guestEvents"));
         batch.set(guestRef, {
           guestName: item.name,
@@ -280,13 +265,8 @@ export default function Dashboard() {
           createdAt: new Date().toISOString()
         });
       });
-
-      const statsUpdate: any = {
-        categories: arrayUnion(...categories),
-      };
-
+      const statsUpdate: any = { categories: arrayUnion(...categories) };
       const newInvitedTotals = { ...(activeEvent.invitedTotals || {}) };
-      
       categories.forEach(cat => {
         newInvitedTotals[cat] = (newInvitedTotals[cat] || 0) + (categoryScans[cat]?.total || 0);
         const existingStats = activeEvent.stats?.[cat] || { gate: 0, drinks: 0, food: 0 };
@@ -294,11 +274,9 @@ export default function Dashboard() {
         statsUpdate[`stats.${cat}.drinks`] = (existingStats.drinks || 0) + (categoryScans[cat]?.drinks || 0);
         statsUpdate[`stats.${cat}.food`] = (existingStats.food || 0) + (categoryScans[cat]?.food || 0);
       });
-      
       statsUpdate.invitedTotals = newInvitedTotals;
       batch.update(doc(db, "events", eventId), statsUpdate);
       await batch.commit();
-      
       toast({ title: "Simulation Complete", description: "Guest data populated." });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Simulation Error", description: e.message });
@@ -344,7 +322,6 @@ export default function Dashboard() {
   if (isUserLoading || eventsLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
   if (!user) return null;
 
-  // Email Verification Guard - Branded
   if (userProfile?.userRole === "EventAdmin" && !user.emailVerified) {
     return (
       <div className="min-h-screen bg-background font-body">
@@ -368,7 +345,6 @@ export default function Dashboard() {
                 We have sent an official activation link to your inbox at <strong>{user.email}</strong>. 
                 Please verify your email to begin managing your premium registries.
               </p>
-              
               <div className="p-6 bg-muted/30 rounded-2xl border border-dashed border-muted-foreground/20 space-y-4">
                 <div className="flex items-center gap-4 text-left">
                   <ShieldCheck className="h-8 w-8 text-accent shrink-0" />
@@ -402,7 +378,6 @@ export default function Dashboard() {
       <div className="print:hidden">
         <Navbar />
       </div>
-      
       <main className="container mx-auto px-4 py-8 print:p-0">
         <div className="print:hidden">
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -411,10 +386,7 @@ export default function Dashboard() {
               <p className="text-muted-foreground">Premium Event Registry &bull; {userProfile?.firstName} {userProfile?.lastName}</p>
             </div>
             <div className="flex gap-2">
-              <Dialog open={isModalOpen} onOpenChange={(open) => {
-                setIsModalOpen(open);
-                if (open) resetWizard();
-              }}>
+              <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (open) resetWizard(); }}>
                 <DialogTrigger asChild>
                   <Button className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-xl">
                     <Plus className="mr-2 h-4 w-4" /> {t('createEvent')}
@@ -431,7 +403,6 @@ export default function Dashboard() {
                         {PLANS.map((plan) => {
                           const isFreeUsed = events?.some(e => e.packageType === "Free");
                           const isDisabled = plan.type === "Free" && (isFreeUsed || hasActivePremium);
-
                           return (
                             <button
                               key={plan.type}
@@ -475,7 +446,6 @@ export default function Dashboard() {
                       </Button>
                     </div>
                   )}
-
                   {creationStage === "payment" && (
                     <div className="space-y-6 py-4 text-center">
                       <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
@@ -506,7 +476,6 @@ export default function Dashboard() {
                       </div>
                     </div>
                   )}
-
                   {creationStage === "details" && (
                     <div className="space-y-6 py-4">
                       <DialogHeader>
@@ -558,18 +527,12 @@ export default function Dashboard() {
                     key={e.id}
                     className={cn(
                       "flex items-center gap-3 rounded-full px-4 py-2 transition-all cursor-pointer border",
-                      activeEventId === e.id 
-                        ? "bg-primary text-primary-foreground shadow-lg border-primary" 
-                        : "bg-background text-foreground border-input hover:bg-accent/10"
+                      activeEventId === e.id ? "bg-primary text-primary-foreground shadow-lg border-primary" : "bg-background text-foreground border-input hover:bg-accent/10"
                     )}
                     onClick={() => setactiveEventId(e.id)}
                   >
-                    <span className="text-sm font-bold whitespace-nowrap">
-                      {e.shortId} &bull; {e.nameEn}
-                    </span>
-                    <span className="text-[9px] uppercase font-bold opacity-60 ml-2">
-                      ({e.packageType})
-                    </span>
+                    <span className="text-sm font-bold whitespace-nowrap">{e.shortId} &bull; {e.nameEn}</span>
+                    <span className="text-[9px] uppercase font-bold opacity-60 ml-2">({e.packageType})</span>
                     {activeEventId === e.id && (
                       <div className="flex items-center gap-1 border-l border-white/20 pl-2">
                         <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-white/20 text-white p-0" onClick={(ev) => { ev.stopPropagation(); openEditDialog(e); }}>
@@ -627,15 +590,9 @@ export default function Dashboard() {
                     </CardHeader>
                     <CardContent className="flex flex-col items-center justify-center pt-4">
                        <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-white/10 mb-4 bg-white/5 flex items-center justify-center">
-                          {activeEvent.posterUrl ? (
-                            <img src={activeEvent.posterUrl} className="object-cover w-full h-full" alt="Poster" />
-                          ) : (
-                            <ImageIcon className="h-8 w-8 opacity-20" />
-                          )}
+                          {activeEvent.posterUrl ? <img src={activeEvent.posterUrl} className="object-cover w-full h-full" alt="Poster" /> : <ImageIcon className="h-8 w-8 opacity-20" />}
                        </div>
-                       <Button variant="outline" size="sm" className="w-full bg-white/10 border-white/20 hover:bg-white/20" onClick={() => openEditDialog(activeEvent)}>
-                          Update Bango
-                       </Button>
+                       <Button variant="outline" size="sm" className="w-full bg-white/10 border-white/20 hover:bg-white/20" onClick={() => openEditDialog(activeEvent)}>Update Bango</Button>
                     </CardContent>
                  </Card>
               </div>
@@ -646,7 +603,6 @@ export default function Dashboard() {
                     <TabsTrigger value="analytics">Live Analytics</TabsTrigger>
                     <TabsTrigger value="staff">Staff Access</TabsTrigger>
                   </TabsList>
-                  
                   <div className="flex gap-2">
                     <Dialog>
                       <DialogTrigger asChild>
@@ -660,25 +616,13 @@ export default function Dashboard() {
                           <DialogDescription>{t('importFormat')}</DialogDescription>
                         </DialogHeader>
                         <div className="grid grid-cols-2 gap-4">
-                           <Button variant="outline" onClick={() => handleCsvSimulation(activeEvent.id, "new")} disabled={isUploading}>
-                             {isUploading ? <Loader2 className="animate-spin" /> : "Simulate New Registry"}
-                           </Button>
-                           <Button className="bg-accent text-accent-foreground" onClick={() => handleCsvSimulation(activeEvent.id, "finished")} disabled={isUploading}>
-                             {isUploading ? <Loader2 className="animate-spin" /> : "Simulate Post-Event"}
-                           </Button>
+                           <Button variant="outline" onClick={() => handleCsvSimulation(activeEvent.id, "new")} disabled={isUploading}>{isUploading ? <Loader2 className="animate-spin" /> : "Simulate New Registry"}</Button>
+                           <Button className="bg-accent text-accent-foreground" onClick={() => handleCsvSimulation(activeEvent.id, "finished")} disabled={isUploading}>{isUploading ? <Loader2 className="animate-spin" /> : "Simulate Post-Event"}</Button>
                         </div>
                       </DialogContent>
                     </Dialog>
-                    <Link href={`/events/${activeEvent.id}/scan`}>
-                       <Button className="bg-primary text-primary-foreground">
-                          <QrCode className="mr-2 h-4 w-4" /> Go to Scanner
-                       </Button>
-                    </Link>
-                    <Link href={`/events/${activeEvent.id}/invite`}>
-                       <Button variant="outline">
-                          {t('generateInvite')}
-                       </Button>
-                    </Link>
+                    <Link href={`/events/${activeEvent.id}/scan`}><Button className="bg-primary text-primary-foreground"><QrCode className="mr-2 h-4 w-4" /> Go to Scanner</Button></Link>
+                    <Link href={`/events/${activeEvent.id}/invite`}><Button variant="outline">{t('generateInvite')}</Button></Link>
                   </div>
                 </div>
                 
@@ -690,7 +634,6 @@ export default function Dashboard() {
                         {t('downloadReport')}
                      </Button>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <CategoryScanCard icon={<DoorOpen className="h-5 w-5 text-accent" />} title={t('checkpointGate')} event={activeEvent} checkpoint="gate" t={t} />
                     <CategoryScanCard icon={<GlassWater className="h-5 w-5 text-accent" />} title={t('checkpointDrinks')} event={activeEvent} checkpoint="drinks" t={t} />
@@ -702,22 +645,15 @@ export default function Dashboard() {
                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <Card className="lg:col-span-1">
                       <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <UserPlus className="h-5 w-5 text-accent" />
-                          Assign Staff
-                        </CardTitle>
+                        <CardTitle className="text-lg flex items-center gap-2"><UserPlus className="h-5 w-5 text-accent" />Assign Staff</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="space-y-2">
                           <Label>{t('selectEvent')}</Label>
                           <Select value={selectedEventForStaff} onValueChange={setSelectedEventForStaff}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Pick Event" />
-                            </SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder="Pick Event" /></SelectTrigger>
                             <SelectContent>
-                              {events?.map((e) => (
-                                <SelectItem key={e.id} value={e.id}>{e.shortId} &bull; {e.nameEn}</SelectItem>
-                              ))}
+                              {events?.map((e) => <SelectItem key={e.id} value={e.id}>{e.shortId} &bull; {e.nameEn}</SelectItem>)}
                             </SelectContent>
                           </Select>
                         </div>
@@ -732,9 +668,7 @@ export default function Dashboard() {
                         <div className="space-y-2">
                           <Label>{t('assignedCheckpoint')}</Label>
                           <Select value={staffCheckpoint} onValueChange={(v: any) => setStaffCheckpoint(v)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="GATE">{t('checkpointGate')}</SelectItem>
                               <SelectItem value="DRINKS">{t('checkpointDrinks')}</SelectItem>
@@ -742,30 +676,20 @@ export default function Dashboard() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <Button className="w-full bg-accent text-accent-foreground" onClick={handleAddStaff}>
-                          Save Staff Member
-                        </Button>
+                        <Button className="w-full bg-accent text-accent-foreground" onClick={handleAddStaff}>Save Staff Member</Button>
                       </CardContent>
                     </Card>
-
                     <Card className="lg:col-span-2">
-                      <CardHeader>
-                        <CardTitle className="text-lg">Assigned Team for {activeEvent.nameEn}</CardTitle>
-                      </CardHeader>
+                      <CardHeader><CardTitle className="text-lg">Assigned Team for {activeEvent.nameEn}</CardTitle></CardHeader>
                       <CardContent>
                         <div className="space-y-2">
                           {staffList?.map((staff) => (
                             <div key={staff.id} className="flex items-center justify-between p-4 bg-muted/20 rounded-lg border">
                               <div className="flex items-center gap-4">
                                 <Shield className="h-5 w-5 text-accent" />
-                                <div>
-                                  <p className="font-bold">{staff.username}</p>
-                                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">{staff.assignedCheckpoint}</p>
-                                </div>
+                                <div><p className="font-bold">{staff.username}</p><p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">{staff.assignedCheckpoint}</p></div>
                               </div>
-                              <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteDoc(doc(db, "events", activeEventId!, "staffAssignments", staff.id))}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteDoc(doc(db, "events", activeEventId!, "staffAssignments", staff.id))}><Trash2 className="h-4 w-4" /></Button>
                             </div>
                           ))}
                         </div>
@@ -783,18 +707,13 @@ export default function Dashboard() {
                    <p className="text-muted-foreground uppercase tracking-widest font-bold">Registry Status Report &bull; {activeEvent.shortId}</p>
                    <p className="text-sm mt-2">{new Date().toLocaleString()}</p>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-accent">Mwaliko App.</div>
-                  <p className="text-xs opacity-50">Premium Event Management</p>
-                </div>
+                <div className="text-right"><div className="text-2xl font-bold text-accent">Mwaliko App.</div><p className="text-xs opacity-50">Premium Event Management</p></div>
               </div>
-
               <div className="grid grid-cols-3 gap-8 mb-12">
                 <PrintStatCard title={t('checkpointGate')} event={activeEvent} checkpoint="gate" t={t} />
                 <PrintStatCard title={t('checkpointDrinks')} event={activeEvent} checkpoint="drinks" t={t} />
                 <PrintStatCard title={t('checkpointFood')} event={activeEvent} checkpoint="food" t={t} />
               </div>
-
               <div>
                 <h2 className="text-xl font-bold border-l-4 border-accent pl-4 mb-6 uppercase tracking-tight">Detailed Guest List</h2>
                 <table className="w-full text-left border-collapse">
@@ -813,15 +732,7 @@ export default function Dashboard() {
                          <td className="p-3 text-xs uppercase text-muted-foreground">{guest.category}</td>
                          <td className="p-3 text-xs font-mono">{guest.ticketId}</td>
                          <td className="p-3 text-center">
-                            {guest.scannedGate ? (
-                              <div className="flex items-center justify-center gap-1 text-green-600 font-bold text-xs">
-                                <CheckCircle className="h-3 w-3" /> {t('attended')}
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-center gap-1 text-red-500 font-bold text-xs">
-                                <XCircle className="h-3 w-3" /> {t('absent')}
-                              </div>
-                            )}
+                            {guest.scannedGate ? <div className="flex items-center justify-center gap-1 text-green-600 font-bold text-xs"><CheckCircle className="h-3 w-3" /> {t('attended')}</div> : <div className="flex items-center justify-center gap-1 text-red-500 font-bold text-xs"><XCircle className="h-3 w-3" /> {t('absent')}</div>}
                          </td>
                        </tr>
                      ))}
@@ -834,24 +745,12 @@ export default function Dashboard() {
 
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Event Registry</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Edit Event Registry</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label>{t('eventName')}</Label>
-                <Input value={editEventName} onChange={(e) => setEditEventName(e.target.value)} />
-              </div>
-              <div className="grid gap-2">
-                <Label>{t('eventPoster')} (URL)</Label>
-                <Input value={editPosterUrl} onChange={(e) => setEditPosterUrl(e.target.value)} placeholder="https://..." />
-              </div>
+              <div className="grid gap-2"><Label>{t('eventName')}</Label><Input value={editEventName} onChange={(e) => setEditEventName(e.target.value)} /></div>
+              <div className="grid gap-2"><Label>{t('eventPoster')} (URL)</Label><Input value={editPosterUrl} onChange={(e) => setEditPosterUrl(e.target.value)} placeholder="https://..." /></div>
             </div>
-            <DialogFooter>
-              <Button onClick={handleUpdateEvent} disabled={isUpdatingEvent}>
-                {isUpdatingEvent ? <Loader2 className="animate-spin" /> : t('save')}
-              </Button>
-            </DialogFooter>
+            <DialogFooter><Button onClick={handleUpdateEvent} disabled={isUpdatingEvent}>{isUpdatingEvent ? <Loader2 className="animate-spin" /> : t('save')}</Button></DialogFooter>
           </DialogContent>
         </Dialog>
       </main>
@@ -864,27 +763,13 @@ function CategoryScanCard({ icon, title, event, checkpoint, t }: { icon: React.R
   const totalInvited = Object.values(event.invitedTotals || {}).reduce((a: number, b: any) => a + (b || 0), 0) as number;
   const totalScanned = categories.reduce((acc: number, cat: string) => acc + (event.stats?.[cat]?.[checkpoint] || 0), 0);
   const percentage = totalInvited > 0 ? (totalScanned / totalInvited) * 100 : 0;
-
   return (
     <Card className="border-none shadow-sm overflow-hidden bg-card/50 backdrop-blur">
-      <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-4">
-        <div className="p-2 bg-accent/10 rounded-lg">{icon}</div>
-        <CardTitle className="text-lg">{title}</CardTitle>
-      </CardHeader>
+      <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-4"><div className="p-2 bg-accent/10 rounded-lg">{icon}</div><CardTitle className="text-lg">{title}</CardTitle></CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex justify-between text-sm mb-1">
-          <span className="font-bold">{totalScanned} / {totalInvited} {t('scanned')}</span>
-          <span className="text-accent font-bold">{Math.round(percentage)}%</span>
-        </div>
+        <div className="flex justify-between text-sm mb-1"><span className="font-bold">{totalScanned} / {totalInvited} {t('scanned')}</span><span className="text-accent font-bold">{Math.round(percentage)}%</span></div>
         <Progress value={percentage} className="h-2" />
-        <div className="grid grid-cols-1 gap-2 pt-2">
-          {categories.map((cat: string) => (
-            <div key={cat} className="bg-muted/30 p-2 rounded-lg flex justify-between items-center text-xs">
-              <span className="uppercase font-bold text-muted-foreground">{cat}</span>
-              <span className="font-bold">{event.stats?.[cat]?.[checkpoint] || 0} / {event.invitedTotals?.[cat] || 0}</span>
-            </div>
-          ))}
-        </div>
+        <div className="grid grid-cols-1 gap-2 pt-2">{categories.map((cat: string) => <div key={cat} className="bg-muted/30 p-2 rounded-lg flex justify-between items-center text-xs"><span className="uppercase font-bold text-muted-foreground">{cat}</span><span className="font-bold">{event.stats?.[cat]?.[checkpoint] || 0} / {event.invitedTotals?.[cat] || 0}</span></div>)}</div>
       </CardContent>
     </Card>
   );
@@ -895,14 +780,10 @@ function PrintStatCard({ title, event, checkpoint, t }: { title: string, event: 
   const totalInvited = Object.values(event.invitedTotals || {}).reduce((a: number, b: any) => a + (b || 0), 0) as number;
   const totalScanned = categories.reduce((acc: number, cat: string) => acc + (event.stats?.[cat]?.[checkpoint] || 0), 0);
   const percentage = totalInvited > 0 ? (totalScanned / totalInvited) * 100 : 0;
-
   return (
     <div className="p-6 bg-muted/10 border-2 border-primary/10 rounded-xl">
        <h3 className="text-sm font-bold uppercase tracking-widest text-primary/50 mb-4">{title}</h3>
-       <div className="flex items-baseline gap-2">
-         <span className="text-4xl font-bold text-primary">{totalScanned}</span>
-         <span className="text-xl text-muted-foreground">/ {totalInvited}</span>
-       </div>
+       <div className="flex items-baseline gap-2"><span className="text-4xl font-bold text-primary">{totalScanned}</span><span className="text-xl text-muted-foreground">/ {totalInvited}</span></div>
        <div className="mt-2 text-xs font-bold text-accent uppercase">{Math.round(percentage)}% {t('attended')}</div>
     </div>
   );
@@ -911,14 +792,8 @@ function PrintStatCard({ title, event, checkpoint, t }: { title: string, event: 
 function StatStat({ icon, title, value, label }: { icon: React.ReactNode, title: string, value: string, label: string }) {
   return (
     <Card className="border-none shadow-sm hover:shadow-md transition-all">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className="text-accent">{icon}</div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground mt-1">{label}</p>
-      </CardContent>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">{title}</CardTitle><div className="text-accent">{icon}</div></CardHeader>
+      <CardContent><div className="text-2xl font-bold">{value}</div><p className="text-xs text-muted-foreground mt-1">{label}</p></CardContent>
     </Card>
   );
 }

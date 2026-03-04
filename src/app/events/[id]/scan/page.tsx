@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
-import { QrCode, ArrowLeft, RefreshCw, CheckCircle2, XCircle, Search, Key, Info, MapPin, Loader2, LogOut } from "lucide-react";
+import { QrCode, ArrowLeft, RefreshCw, CheckCircle2, XCircle, Search, Key, Info, MapPin, Loader2, LogOut, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -18,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 type Checkpoint = "GATE" | "DRINKS" | "FOOD";
-type ScanStatus = "idle" | "scanning" | "valid" | "invalid" | "used";
+type ScanStatus = "idle" | "scanning" | "valid" | "invalid" | "used" | "sequence_error";
 
 export default function ScanPage() {
   const { t } = useTranslation();
@@ -99,13 +98,24 @@ export default function ScanPage() {
       const guestData = guestDoc.data();
       const checkpointField = activeCheckpoint === "GATE" ? "scannedGate" : activeCheckpoint === "DRINKS" ? "scannedDrinks" : "scannedFood";
 
+      // SECURITY SEQUENCING LOGIC
+      // If scanning for Drinks or Food, guest MUST have passed the Gate first.
+      if (activeCheckpoint !== "GATE" && !guestData.scannedGate) {
+        setStatus("sequence_error");
+        setScannedGuest({ name: guestData.guestName, category: guestData.category });
+        return;
+      }
+
       if (guestData[checkpointField]) {
         setStatus("used");
         setScannedGuest({ name: guestData.guestName, category: guestData.category });
         return;
       }
 
-      await updateDoc(guestDoc.ref, { [checkpointField]: true });
+      await updateDoc(guestDoc.ref, { 
+        [checkpointField]: true,
+        updatedAt: new Date().toISOString()
+      });
 
       const eRef = doc(db, "events", eventId as string);
       const statPath = `stats.${guestData.category}.${activeCheckpoint.toLowerCase()}`;
@@ -141,7 +151,6 @@ export default function ScanPage() {
 
           if (code) {
             try {
-              // Try parsing as our app's JSON format from Invitation Center
               const parsed = JSON.parse(code.data);
               if (parsed.ticketId) {
                 verifyTicket(parsed.ticketId);
@@ -149,7 +158,6 @@ export default function ScanPage() {
                 verifyTicket(code.data);
               }
             } catch (e) {
-              // Fallback to raw string
               verifyTicket(code.data);
             }
           }
@@ -218,7 +226,6 @@ export default function ScanPage() {
         </div>
 
         <div className="relative w-full max-w-xs aspect-square border-8 border-accent/40 rounded-[2.5rem] overflow-hidden bg-black/60 flex items-center justify-center shadow-[0_0_50px_rgba(212,175,55,0.2)]">
-          {/* Main Scanning Viewport */}
           <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover opacity-80" autoPlay muted playsInline />
           <canvas ref={canvasRef} className="hidden" />
 
@@ -262,8 +269,18 @@ export default function ScanPage() {
                <Button variant="ghost" className="mt-8 text-white/70 hover:text-white border border-white/20" onClick={() => setStatus("idle")}>Acknowledge</Button>
             </div>
           )}
+
+          {status === "sequence_error" && (
+            <div className="absolute inset-0 bg-yellow-600 flex flex-col items-center justify-center animate-in zoom-in-95 fade-in duration-300 z-20 text-center px-6">
+               <ShieldAlert className="h-24 w-24 text-white mb-4" />
+               <h2 className="text-2xl font-black leading-tight">{t('statusSequenceError')}</h2>
+               <p className="mt-4 text-white/90 font-bold text-sm">
+                {scannedGuest?.name}<br/>must scan at GATE first.
+               </p>
+               <Button variant="ghost" className="mt-8 text-white/70 hover:text-white border border-white/20" onClick={() => setStatus("idle")}>Send to Gate</Button>
+            </div>
+          )}
           
-          {/* Overlay scanning corners */}
           <div className="absolute inset-0 pointer-events-none z-30">
             <div className="absolute top-10 left-10 w-16 h-16 border-t-4 border-l-4 border-accent rounded-tl-xl opacity-60"></div>
             <div className="absolute top-10 right-10 w-16 h-16 border-t-4 border-r-4 border-accent rounded-tr-xl opacity-60"></div>
