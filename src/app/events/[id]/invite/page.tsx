@@ -8,11 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { QrCode, User, MapPin, Printer, MessageSquare, ShieldCheck, Loader2, Image as ImageIcon, Sparkles, Check, ChevronRight, Save } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+import { QrCode, User, MapPin, Printer, MessageSquare, ShieldCheck, Loader2, Image as ImageIcon, Sparkles, Check, Save, Share2 } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 import { useParams } from "next/navigation";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc, updateDoc } from "firebase/firestore";
@@ -20,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { aiWhatsappInvitationGenerator } from "@/ai/flows/ai-whatsapp-invitation-generator";
 
 type TemplateId = "royal-gold" | "modern-minimal" | "garden-floral" | "arch-romantic" | "send-off" | "mchango" | "white-gold" | "soft-blush" | "heritage" | "minimal-formal";
 
@@ -28,19 +28,20 @@ interface TemplateDefinition {
   name: string;
   hasPhoto: boolean;
   style: string;
+  description: string;
 }
 
 const TEMPLATES: TemplateDefinition[] = [
-  { id: "royal-gold", name: "Royal Gold (Photo)", hasPhoto: true, style: "bg-zinc-900 text-amber-200 border-amber-500/30" },
-  { id: "modern-minimal", name: "Modern Minimal (Photo)", hasPhoto: true, style: "bg-white text-zinc-900 border-zinc-200" },
-  { id: "garden-floral", name: "Garden Floral (Photo)", hasPhoto: true, style: "bg-rose-50 text-rose-900 border-rose-200" },
-  { id: "arch-romantic", name: "Arch Romantic (Photo)", hasPhoto: true, style: "bg-stone-100 text-stone-800 border-stone-200" },
-  { id: "send-off", name: "Send-off Floral", hasPhoto: false, style: "bg-emerald-50 text-emerald-900 border-emerald-200" },
-  { id: "mchango", name: "Mchango Logic", hasPhoto: false, style: "bg-blue-50 text-blue-900 border-blue-200" },
-  { id: "white-gold", name: "White & Gold Modern", hasPhoto: false, style: "bg-white text-zinc-800 border-amber-500" },
-  { id: "soft-blush", name: "Soft Blush Premium", hasPhoto: false, style: "bg-pink-50 text-pink-900 border-pink-200" },
-  { id: "heritage", name: "Heritage Elegant", hasPhoto: false, style: "bg-orange-50 text-orange-950 border-orange-200" },
-  { id: "minimal-formal", name: "Minimal Formal", hasPhoto: false, style: "bg-zinc-50 text-zinc-900 border-zinc-300" },
+  { id: "royal-gold", name: "Royal Gold (Photo)", hasPhoto: true, style: "bg-zinc-900 text-amber-200 border-amber-500/30", description: "Luxurious deep charcoal with gold accents and patterns." },
+  { id: "modern-minimal", name: "Modern Minimal (Photo)", hasPhoto: true, style: "bg-white text-zinc-900 border-zinc-200", description: "Clean, high-contrast typography on a white background." },
+  { id: "garden-floral", name: "Garden Floral (Photo)", hasPhoto: true, style: "bg-rose-50 text-rose-900 border-rose-200", description: "Soft rose tones with elegant floral illustrations." },
+  { id: "arch-romantic", name: "Arch Romantic (Photo)", hasPhoto: true, style: "bg-stone-100 text-stone-800 border-stone-200", description: "Minimalist stone textures with romantic arch frames." },
+  { id: "send-off", name: "Send-off Floral", hasPhoto: false, style: "bg-emerald-50 text-emerald-900 border-emerald-200", description: "Lush greenery and emerald accents for celebratory send-offs." },
+  { id: "mchango", name: "Mchango Logic", hasPhoto: false, style: "bg-blue-50 text-blue-900 border-blue-200", description: "Professional blue design focused on community and support." },
+  { id: "white-gold", name: "White & Gold Modern", hasPhoto: false, style: "bg-white text-zinc-800 border-amber-500", description: "Pristine white with metallic gold highlights." },
+  { id: "soft-blush", name: "Soft Blush Premium", hasPhoto: false, style: "bg-pink-50 text-pink-900 border-pink-200", description: "Delicate pink palette for intimate celebrations." },
+  { id: "heritage", name: "Heritage Elegant", hasPhoto: false, style: "bg-orange-50 text-orange-950 border-orange-200", description: "Warm orange tones with traditional heritage patterns." },
+  { id: "minimal-formal", name: "Minimal Formal", hasPhoto: false, style: "bg-zinc-50 text-zinc-900 border-zinc-300", description: "Sophisticated grey and black for formal receptions." },
 ];
 
 export default function InvitePage() {
@@ -65,7 +66,9 @@ export default function InvitePage() {
   const [footerText, setFooterText] = useState("Mwaliko Premium Registry • Verified");
   const [showPhoto, setShowPhoto] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const invitationRef = useRef<HTMLDivElement>(null);
 
   const eventRef = useMemoFirebase(() => {
@@ -140,14 +143,66 @@ export default function InvitePage() {
     window.print();
   };
 
-  const handleShareWhatsApp = () => {
+  const handleShareWhatsApp = async () => {
+    if (isSharing) return;
+    setIsSharing(true);
+    
     const name = guestName || "Mgeni Rasmi";
     const eventName = event?.nameEn || "tukio letu";
     const cat = category || "STANDARD";
     
-    const text = `Habari ${name}, Karibu kwenye ${eventName}\n\nTICKET ID: ${ticketId}\nCATEGORY: ${cat}\n\nAsante na karibu sana.\n\nCard Powered by 360 Digital. TEL: 0614 320 858`;
+    const whatsappMessage = `Habari ${name}, Karibu kwenye ${eventName}\n\nTICKET ID: ${ticketId}\nCATEGORY: ${cat}\n\nAsante na karibu sana.\n\nCard Powered by 360 Digital. TEL: 0614 320 858`;
     
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    try {
+      // 1. Get QR code as data URI
+      const qrCanvas = qrCanvasRef.current;
+      if (!qrCanvas) throw new Error("QR Canvas not found");
+      const qrDataUri = qrCanvas.toDataURL("image/png");
+
+      // 2. Call AI Flow to generate high-end invitation image
+      const template = TEMPLATES.find(t => t.id === selectedTemplate);
+      const aiResponse = await aiWhatsappInvitationGenerator({
+        eventName: event?.nameEn || "Event",
+        eventType: event?.nameEn.includes("Harusi") ? "Wedding" : "Event",
+        eventDate: event?.startDate ? new Date(event.startDate).toLocaleDateString() : "TBD",
+        eventTime: "7:00 PM",
+        eventVenue: event?.venue || "Venue TBD",
+        guestName: name,
+        desiredTone: "luxurious",
+        brandingDescription: template?.description || "Elegant and premium",
+        thematicElements: template?.name || "Premium celebration",
+        qrCodeImage: qrDataUri
+      });
+
+      // 3. Share via Web Share API (if supported) to include image
+      const response = await fetch(aiResponse.invitationCardImageUrl);
+      const blob = await response.blob();
+      const file = new File([blob], `invitation-${ticketId}.png`, { type: 'image/png' });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Invitation for ${name}`,
+          text: whatsappMessage,
+        });
+      } else {
+        // Fallback for desktop: Open WhatsApp with text and trigger image download
+        const link = document.createElement('a');
+        link.href = aiResponse.invitationCardImageUrl;
+        link.download = `Invitation_${name.replace(/\s+/g, '_')}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        window.open(`https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
+        toast({ title: "Sharing Support", description: "Card downloaded. Send the image manually to WhatsApp." });
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast({ variant: "destructive", title: "Share Failed", description: "Could not generate or share invitation image." });
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   const qrData = JSON.stringify({ ticketId, eventId: id });
@@ -178,8 +233,8 @@ export default function InvitePage() {
               <Button onClick={handleSaveSettings} disabled={isSaving} className="bg-primary text-primary-foreground">
                 {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Save className="mr-2 h-4 w-4" />} Save Design
               </Button>
-              <Button onClick={handleShareWhatsApp} className="bg-green-600 hover:bg-green-700 text-white">
-                <MessageSquare className="mr-2 h-4 w-4" /> WhatsApp
+              <Button onClick={handleShareWhatsApp} disabled={isSharing} className="bg-green-600 hover:bg-green-700 text-white">
+                {isSharing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <MessageSquare className="mr-2 h-4 w-4" />} WhatsApp
               </Button>
               <Button onClick={handlePrint} variant="outline">
                 <Printer className="mr-2 h-4 w-4" /> Print
@@ -349,9 +404,6 @@ export default function InvitePage() {
                         className="object-cover"
                         data-ai-hint="wedding event"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                        <p className="text-white text-[10px] font-bold uppercase">Event Poster View</p>
-                      </div>
                     </div>
                   )}
 
@@ -381,7 +433,8 @@ export default function InvitePage() {
 
                     <div className="flex justify-center">
                       <div className="p-3 bg-white rounded-xl shadow-inner border border-zinc-100">
-                        <QRCodeSVG 
+                        <QRCodeCanvas 
+                          ref={qrCanvasRef}
                           value={qrData} 
                           size={140} 
                           level={"H"}
