@@ -29,6 +29,7 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+    unoptimized: true, // Ensuring images load correctly on Netlify without extra config
   },
 };
 
