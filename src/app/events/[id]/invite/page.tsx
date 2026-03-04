@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -199,7 +198,14 @@ export default function InvitePage() {
       }
     } catch (e: any) {
       console.error(e);
-      toast({ variant: "destructive", title: "Share Failed", description: "Could not generate or share invitation image." });
+      const isQuotaError = e.message?.includes('AI service is currently busy') || e.message?.includes('429');
+      toast({ 
+        variant: "destructive", 
+        title: isQuotaError ? "Service Busy" : "Share Failed", 
+        description: isQuotaError 
+          ? e.message 
+          : "Could not generate invitation image. Please check your connection." 
+      });
     } finally {
       setIsSharing(false);
     }

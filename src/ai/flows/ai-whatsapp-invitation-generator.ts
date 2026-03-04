@@ -66,38 +66,57 @@ const aiWhatsappInvitationGeneratorFlow = ai.defineFlow(
   async (input) => {
     // Step 1: Generate the WhatsApp message and the image generation description
     const { output: contentOutput } = await generateWhatsappInvitationContentPrompt(input);
-    const { whatsappMessage, invitationCardDescription } = contentOutput!;
+    if (!contentOutput) {
+      throw new Error('Failed to generate invitation content.');
+    }
+    const { whatsappMessage, invitationCardDescription } = contentOutput;
 
-    // Step 2: Generate the invitation card image, composing the QR code onto the described design
-    // Using gemini-2.5-flash-image for image composition and generation.
-    const { media } = await ai.generate({
-      model: googleAI.model('gemini-2.5-flash-image'),
-      prompt: [
-        { text: invitationCardDescription }, // The description of the base card with a QR code area
-        {
-          media: {
-            url: input.qrCodeImage,
-            // The contentType is technically part of the data URI, but specifying it
-            // explicitly here can help the model interpret it correctly.
-            contentType: 'image/png', // Assuming QR codes are typically PNGs.
+    // Step 2: Generate the invitation card image with retry logic for 429 errors
+    let media = null;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+      try {
+        const response = await ai.generate({
+          model: googleAI.model('gemini-2.5-flash-image'),
+          prompt: [
+            { text: invitationCardDescription },
+            {
+              media: {
+                url: input.qrCodeImage,
+                contentType: 'image/png',
+              },
+            },
+            { text: "Integrate the provided QR code image into the invitation card design as described. Ensure it is clearly visible and functional, placed precisely in the designated elegant space described for the QR code, within the overall luxurious aesthetic. Do not generate a new QR code; use the provided image." }
+          ],
+          config: {
+            responseModalities: ['TEXT', 'IMAGE'],
           },
-        },
-        { text: "Integrate the provided QR code image into the invitation card design as described. Ensure it is clearly visible and functional, placed precisely in the designated elegant space described for the QR code, within the overall luxurious aesthetic. Do not generate a new QR code; use the provided image." }
-      ],
-      config: {
-        responseModalities: ['TEXT', 'IMAGE'], // Request both text (for potential debugging/confirmation) and the image.
-      },
-    });
+        });
+        media = response.media;
+        if (media) break;
+      } catch (error: any) {
+        attempts++;
+        if (error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED')) {
+          if (attempts >= maxAttempts) {
+            throw new Error('AI service is currently busy due to high demand. Please wait a moment and try again.');
+          }
+          // Exponential backoff: wait 5s, 10s...
+          await new Promise(resolve => setTimeout(resolve, attempts * 5000));
+        } else {
+          throw error;
+        }
+      }
+    }
 
     if (!media) {
       throw new Error('Failed to generate invitation card image.');
     }
 
-    const invitationCardImageUrl = media.url; // This will be the data URI of the generated image
-
     return {
       whatsappMessage,
-      invitationCardImageUrl,
+      invitationCardImageUrl: media.url,
     };
   }
 );
