@@ -32,8 +32,8 @@ interface PlanConfig {
 }
 
 const PLANS: PlanConfig[] = [
-  { type: "Free", limit: 100, price: "0 TZS", duration: "1 Month", name: "Free Trial" },
-  { type: "Premium", limit: 999999, price: "100,000 TZS", duration: "3 Months", name: "Premium Package" },
+  { type: "Free", limit: 200, price: "0 TZS", duration: "1 Month", name: "Free Trial" },
+  { type: "Premium", limit: 999999, price: "350,000 TZS", duration: "2 Months", name: "Premium Package" },
 ];
 
 export default function Dashboard() {
@@ -102,12 +102,13 @@ export default function Dashboard() {
   const handleCreateEvent = async () => {
     if (!db || !user || !eventName) return;
 
-    // Check if user is on Free plan and already has an event
-    if (selectedPlan === "Free" && events && events.length >= 1) {
+    // Check if user has EVER used a free trial
+    const hasUsedFreeTrial = events?.some(e => e.packageType === "Free");
+    if (selectedPlan === "Free" && hasUsedFreeTrial) {
       toast({
         variant: "destructive",
-        title: t('eventLimitReached'),
-        description: t('eventLimitDescription'),
+        title: "Free Trial Already Used",
+        description: "You have already used your one-time free trial. Please select the Premium Package.",
       });
       return;
     }
@@ -125,14 +126,14 @@ export default function Dashboard() {
         guestLimit: plan.limit,
         packageType: plan.type,
         categories: [], 
-        isActive: selectedPlan === "Free", // Free activates immediately
+        isActive: selectedPlan === "Free", 
         isPaid: selectedPlan === "Free",
         eventAdminId: user.uid,
         stats: {},
         invitedTotals: {},
         expiryDate: selectedPlan === "Free" 
           ? new Date(Date.now() + 86400000 * 30).toISOString() 
-          : new Date(Date.now() + 86400000 * 90).toISOString()
+          : new Date(Date.now() + 86400000 * 60).toISOString() // 2 Months for Premium
       };
       const docRef = await addDoc(collection(db, "events"), newEvent);
       
@@ -160,7 +161,7 @@ export default function Dashboard() {
       setActiveEventId(pendingEventId);
       setShowPayment(false);
       setPendingEventId(null);
-      toast({ title: "Payment Successful", description: "Your premium registry is now active for 3 months!" });
+      toast({ title: "Payment Successful", description: "Your premium registry is now active for 2 months!" });
     } finally {
       setIsUpdatingEvent(false);
     }
@@ -204,7 +205,7 @@ export default function Dashboard() {
     
     // Check Limits
     const currentCount = Object.values(activeEvent.invitedTotals || {}).reduce((a: number, b: any) => a + (b || 0), 0) as number;
-    const limit = activeEvent.guestLimit || 100;
+    const limit = activeEvent.guestLimit || 200;
     
     if (currentCount >= limit && activeEvent.packageType === "Free") {
       toast({ variant: "destructive", title: t('limitReached'), description: t('upgradePlan') });
@@ -336,7 +337,7 @@ export default function Dashboard() {
   if (!user) return null;
 
   const currentGuestCount = activeEvent ? Object.values(activeEvent.invitedTotals || {}).reduce((a: number, b: any) => a + (b || 0), 0) as number : 0;
-  const guestLimit = activeEvent?.guestLimit || 100;
+  const guestLimit = activeEvent?.guestLimit || 200;
 
   return (
     <div className="min-h-screen bg-background print:bg-white print:text-black">
@@ -375,7 +376,7 @@ export default function Dashboard() {
                            <span>Total Due</span>
                            <span className="text-accent">{PLANS.find(p => p.type === selectedPlan)?.price}</span>
                         </div>
-                        <p className="text-xs text-muted-foreground italic">Activation for 3 months with unlimited cards.</p>
+                        <p className="text-xs text-muted-foreground italic">Activation for 2 months with unlimited cards.</p>
                       </div>
                       <Button className="w-full h-12 bg-primary" onClick={handleCompletePayment} disabled={isUpdatingEvent}>
                         {isUpdatingEvent ? <Loader2 className="animate-spin" /> : t('payAndActivate')}
@@ -395,26 +396,38 @@ export default function Dashboard() {
                         <div className="grid gap-2">
                           <Label>{t('package')}</Label>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {PLANS.map((plan) => (
-                              <button
-                                key={plan.type}
-                                onClick={() => setSelectedPlan(plan.type)}
-                                className={cn(
-                                  "p-4 rounded-xl border-2 text-left transition-all",
-                                  selectedPlan === plan.type ? "border-accent bg-accent/5 ring-2 ring-accent/20" : "border-muted hover:border-accent/50"
-                                )}
-                              >
-                                <div className="flex justify-between items-start mb-2">
-                                   <p className="font-bold text-sm">{plan.name}</p>
-                                   {selectedPlan === plan.type && <Check className="h-4 w-4 text-accent" />}
-                                </div>
-                                <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">
-                                  {plan.limit === 999999 ? "Unlimited Cards" : `${plan.limit} Cards`}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground mb-2">{plan.duration}</p>
-                                <p className="text-xs font-bold text-accent">{plan.price}</p>
-                              </button>
-                            ))}
+                            {PLANS.map((plan) => {
+                               const isFreeUsed = events?.some(e => e.packageType === "Free");
+                               const isDisabled = plan.type === "Free" && isFreeUsed;
+
+                               return (
+                                <button
+                                  key={plan.type}
+                                  disabled={isDisabled}
+                                  onClick={() => setSelectedPlan(plan.type)}
+                                  className={cn(
+                                    "p-4 rounded-xl border-2 text-left transition-all relative",
+                                    selectedPlan === plan.type ? "border-accent bg-accent/5 ring-2 ring-accent/20" : "border-muted hover:border-accent/50",
+                                    isDisabled && "opacity-50 cursor-not-allowed bg-muted grayscale"
+                                  )}
+                                >
+                                  <div className="flex justify-between items-start mb-2">
+                                     <p className="font-bold text-sm">{plan.name}</p>
+                                     {selectedPlan === plan.type && <Check className="h-4 w-4 text-accent" />}
+                                  </div>
+                                  <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">
+                                    {plan.limit === 999999 ? "Unlimited Cards" : `${plan.limit} Cards`}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground mb-2">{plan.duration}</p>
+                                  <p className="text-xs font-bold text-accent">{plan.price}</p>
+                                  {isDisabled && (
+                                    <span className="absolute inset-0 flex items-center justify-center bg-black/5 rounded-xl">
+                                       <span className="bg-destructive text-white text-[8px] font-bold px-2 py-0.5 rounded-full rotate-[-10deg]">USED</span>
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
                           </div>
                           <p className="text-[10px] text-muted-foreground mt-2 italic flex items-center gap-1">
                              <Sparkles className="h-3 w-3" /> {t('includesWhatsapp')}
@@ -522,7 +535,7 @@ export default function Dashboard() {
                           <Info className="h-3 w-3 text-accent" />
                           <p className="text-[10px] text-muted-foreground italic">
                             Your registry is on the <strong>{activeEvent.packageType}</strong> package. 
-                            {activeEvent.packageType === "Free" ? " Expires in 1 month." : " Expires in 3 months."}
+                            {activeEvent.packageType === "Free" ? " Expires in 1 month." : " Expires in 2 months."}
                           </p>
                        </div>
                     </CardContent>
