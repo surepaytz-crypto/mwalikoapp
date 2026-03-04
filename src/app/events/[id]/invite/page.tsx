@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Download, QrCode, User, MapPin, Printer, MessageSquare, Send, Tag, Loader2 } from "lucide-react";
+import { Download, QrCode, User, MapPin, Printer, MessageSquare, Send, Tag, Loader2, ShieldCheck, Hash } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useParams } from "next/navigation";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
@@ -24,6 +24,7 @@ export default function InvitePage() {
   
   const [guestName, setGuestName] = useState("");
   const [category, setCategory] = useState("");
+  const [ticketId, setTicketId] = useState(`MW-${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
   const invitationRef = useRef<HTMLDivElement>(null);
 
   const eventRef = useMemoFirebase(() => {
@@ -44,21 +45,19 @@ export default function InvitePage() {
   };
 
   const handleShareWhatsApp = () => {
-    const text = `Hello ${guestName || "Honorable Guest"}! You are cordially invited to ${event?.nameEn}. Venue: ${event?.venue}. Scan your QR for entry.`;
+    // Specialized Swahili Template for Tanzanian Clients
+    const text = `Habari ${guestName || "Mgeni Rasmi"}! Unakaribishwa kwa furaha kwenye ${event?.nameEn}. Ukumbi: ${event?.venue}. Tarehe: ${event?.startDate ? new Date(event.startDate).toLocaleDateString() : 'TBD'}. \n\nTafadhali tumia namba yako ya tiketi kwa uhakiki: ${ticketId}\n\nAu fungua picha ya QR hapa kwa kuingia langoni. Karibu sana!`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const handleShareSMS = () => {
-    const text = `Hello ${guestName || "Honorable Guest"}! You are invited to ${event?.nameEn} at ${event?.venue}. Use your QR code for verified entry.`;
+    const text = `Habari ${guestName || "Mgeni Rasmi"}! Karibu ${event?.nameEn} kule ${event?.venue}. Namba ya Tiketi yako ni ${ticketId}. Usipoteze ujumbe huu.`;
     window.open(`sms:?body=${encodeURIComponent(text)}`, '_blank');
   };
 
   const qrData = JSON.stringify({
-    guest: guestName || "Guest",
-    event: event?.nameEn,
+    ticketId: ticketId,
     eventId: id,
-    category: category,
-    id: Math.random().toString(36).substring(7)
   });
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
@@ -83,10 +82,10 @@ export default function InvitePage() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button onClick={handleShareWhatsApp} className="bg-green-600 hover:bg-green-700 text-white">
-                <MessageSquare className="mr-2 h-4 w-4" /> {t('shareWhatsApp')}
+                <MessageSquare className="mr-2 h-4 w-4" /> WhatsApp
               </Button>
               <Button onClick={handleShareSMS} className="bg-blue-600 hover:bg-blue-700 text-white">
-                <Send className="mr-2 h-4 w-4" /> {t('shareSMS')}
+                <Send className="mr-2 h-4 w-4" /> SMS
               </Button>
               <Button onClick={handlePrint} className="bg-primary text-primary-foreground">
                 <Printer className="mr-2 h-4 w-4" /> Print Invitation
@@ -95,12 +94,11 @@ export default function InvitePage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Form Section */}
             <div className="space-y-6 print:hidden">
               <Card className="border-none shadow-xl bg-card/50 backdrop-blur">
                 <CardHeader>
-                  <CardTitle>Guest Details</CardTitle>
-                  <CardDescription>Enter details to generate a unique digital or physical invitation.</CardDescription>
+                  <CardTitle>Guest Entry</CardTitle>
+                  <CardDescription>Details for digital and physical registry.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -108,8 +106,17 @@ export default function InvitePage() {
                     <Input 
                       value={guestName} 
                       onChange={(e) => setGuestName(e.target.value)} 
-                      placeholder="e.g. Honorable John Doe" 
+                      placeholder="e.g. Hon. John Doe" 
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ticket ID</Label>
+                    <div className="flex gap-2">
+                      <Input value={ticketId} readOnly className="bg-muted font-mono" />
+                      <Button variant="outline" onClick={() => setTicketId(`MW-${Math.random().toString(36).substring(2, 8).toUpperCase()}`)}>
+                        Regen
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Guest Category</Label>
@@ -132,15 +139,14 @@ export default function InvitePage() {
                     <div className="flex items-start gap-4">
                        <ShieldCheck className="h-6 w-6 text-accent shrink-0 mt-1" />
                        <div>
-                          <p className="font-bold text-sm">Security Policy</p>
-                          <p className="text-xs text-muted-foreground">Each QR code is linked to the 3-point scan logic (Gate, Drinks, Food). Category access is enforced by scanners.</p>
+                          <p className="font-bold text-sm">3-Point Scan Policy</p>
+                          <p className="text-xs text-muted-foreground">Each guest is tracked at Gate, Drinks, and Food. Access is restricted per category.</p>
                        </div>
                     </div>
                  </CardContent>
               </Card>
             </div>
 
-            {/* Invitation Preview Section */}
             <div className="flex justify-center">
               <div 
                 ref={invitationRef}
@@ -154,9 +160,9 @@ export default function InvitePage() {
                 <div className="w-full h-px bg-accent/30 mx-auto max-w-[100px]"></div>
 
                 <div className="space-y-4">
-                  <p className="text-sm font-light text-muted-foreground italic">You are cordially invited,</p>
+                  <p className="text-sm font-light text-muted-foreground italic">Karibu sana,</p>
                   <h3 className="text-2xl font-semibold border-b border-black/5 pb-2 inline-block">
-                    {guestName || "Guest Name"}
+                    {guestName || "Mgeni Rasmi"}
                   </h3>
                   <div className="mt-2">
                      <span className="px-4 py-1 bg-accent/10 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] border border-accent/20">
@@ -186,12 +192,12 @@ export default function InvitePage() {
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">Unique Access Code</p>
-                  <p className="text-xs font-mono opacity-60 uppercase">MW-{Math.random().toString(36).substring(2, 10)}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">{t('ticketId')}</p>
+                  <p className="text-xl font-mono font-bold text-primary tracking-wider">{ticketId}</p>
                 </div>
 
                 <footer className="pt-8 border-t border-black/5 w-full">
-                  <p className="text-[10px] uppercase tracking-widest opacity-50">Mwaliko Premium Registry &bull; 3-Point Verified</p>
+                  <p className="text-[10px] uppercase tracking-widest opacity-50">Mwaliko Premium Registry &bull; Verified Registry</p>
                 </footer>
               </div>
             </div>
@@ -199,31 +205,12 @@ export default function InvitePage() {
         </div>
       </main>
 
-      {/* Print styles */}
       <style jsx global>{`
         @media print {
-          body {
-            background: white !important;
-            padding: 0;
-            margin: 0;
-          }
-          .container {
-            max-width: 100% !important;
-            width: 100% !important;
-            padding: 0 !important;
-          }
-          main {
-            padding: 0 !important;
-          }
-          .lg\\:grid-cols-2 {
-            display: block !important;
-          }
-          .max-w-md {
-            max-width: 100% !important;
-            box-shadow: none !important;
-            border: none !important;
-            margin: 0 auto !important;
-          }
+          body { background: white !important; }
+          .print\\:hidden { display: none !important; }
+          .container { max-width: 100% !important; width: 100% !important; }
+          .max-w-md { box-shadow: none !important; border: none !important; margin: 0 auto !important; }
         }
       `}</style>
     </div>
