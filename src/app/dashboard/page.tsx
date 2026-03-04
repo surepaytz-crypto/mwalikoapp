@@ -4,7 +4,7 @@
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check } from "lucide-react";
+import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield, FileSpreadsheet, Upload, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc } from "@/firebase";
@@ -21,18 +21,19 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-type PackageType = "Standard" | "Classic" | "Premium";
+type PackageType = "Free" | "Premium";
 
 interface PlanConfig {
   type: PackageType;
   limit: number;
   price: string;
+  duration: string;
+  name: string;
 }
 
 const PLANS: PlanConfig[] = [
-  { type: "Standard", limit: 100, price: "120,000 TZS" },
-  { type: "Classic", limit: 250, price: "300,000 TZS" },
-  { type: "Premium", limit: 999999, price: "500,000 TZS" },
+  { type: "Free", limit: 100, price: "0 TZS", duration: "1 Month", name: "Free Trial" },
+  { type: "Premium", limit: 999999, price: "100,000 TZS", duration: "3 Months", name: "Premium Package" },
 ];
 
 export default function Dashboard() {
@@ -49,7 +50,7 @@ export default function Dashboard() {
   
   // Create Event Form State
   const [eventName, setEventName] = useState("");
-  const [selectedPlan, setSelectedPlan] = useState<PackageType>("Standard");
+  const [selectedPlan, setSelectedPlan] = useState<PackageType>("Free");
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [pendingEventId, setPendingEventId] = useState<string | null>(null);
@@ -100,6 +101,17 @@ export default function Dashboard() {
 
   const handleCreateEvent = async () => {
     if (!db || !user || !eventName) return;
+
+    // Check if user is on Free plan and already has an event
+    if (selectedPlan === "Free" && events && events.length >= 1) {
+      toast({
+        variant: "destructive",
+        title: t('eventLimitReached'),
+        description: t('eventLimitDescription'),
+      });
+      return;
+    }
+
     setIsCreatingEvent(true);
     const plan = PLANS.find(p => p.type === selectedPlan)!;
     try {
@@ -113,15 +125,24 @@ export default function Dashboard() {
         guestLimit: plan.limit,
         packageType: plan.type,
         categories: [], 
-        isActive: false, // Inactive until paid
-        isPaid: false,
+        isActive: selectedPlan === "Free", // Free activates immediately
+        isPaid: selectedPlan === "Free",
         eventAdminId: user.uid,
         stats: {},
-        invitedTotals: {}
+        invitedTotals: {},
+        expiryDate: selectedPlan === "Free" 
+          ? new Date(Date.now() + 86400000 * 30).toISOString() 
+          : new Date(Date.now() + 86400000 * 90).toISOString()
       };
       const docRef = await addDoc(collection(db, "events"), newEvent);
-      setPendingEventId(docRef.id);
-      setShowPayment(true);
+      
+      if (selectedPlan === "Premium") {
+        setPendingEventId(docRef.id);
+        setShowPayment(true);
+      } else {
+        setActiveEventId(docRef.id);
+        toast({ title: "Event Created", description: "Your free trial registry is now active!" });
+      }
       setEventName("");
     } finally {
       setIsCreatingEvent(false);
@@ -139,7 +160,7 @@ export default function Dashboard() {
       setActiveEventId(pendingEventId);
       setShowPayment(false);
       setPendingEventId(null);
-      toast({ title: "Payment Successful", description: "Your premium registry is now active!" });
+      toast({ title: "Payment Successful", description: "Your premium registry is now active for 3 months!" });
     } finally {
       setIsUpdatingEvent(false);
     }
@@ -185,7 +206,7 @@ export default function Dashboard() {
     const currentCount = Object.values(activeEvent.invitedTotals || {}).reduce((a: number, b: any) => a + (b || 0), 0) as number;
     const limit = activeEvent.guestLimit || 100;
     
-    if (currentCount >= limit && activeEvent.packageType !== "Premium") {
+    if (currentCount >= limit && activeEvent.packageType === "Free") {
       toast({ variant: "destructive", title: t('limitReached'), description: t('upgradePlan') });
       return;
     }
@@ -354,7 +375,7 @@ export default function Dashboard() {
                            <span>Total Due</span>
                            <span className="text-accent">{PLANS.find(p => p.type === selectedPlan)?.price}</span>
                         </div>
-                        <p className="text-xs text-muted-foreground italic">Simulation: Click below to confirm payment and activate your event.</p>
+                        <p className="text-xs text-muted-foreground italic">Activation for 3 months with unlimited cards.</p>
                       </div>
                       <Button className="w-full h-12 bg-primary" onClick={handleCompletePayment} disabled={isUpdatingEvent}>
                         {isUpdatingEvent ? <Loader2 className="animate-spin" /> : t('payAndActivate')}
@@ -373,7 +394,7 @@ export default function Dashboard() {
                         </div>
                         <div className="grid gap-2">
                           <Label>{t('package')}</Label>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {PLANS.map((plan) => (
                               <button
                                 key={plan.type}
@@ -384,12 +405,13 @@ export default function Dashboard() {
                                 )}
                               >
                                 <div className="flex justify-between items-start mb-2">
-                                   <p className="font-bold text-sm">{plan.type}</p>
+                                   <p className="font-bold text-sm">{plan.name}</p>
                                    {selectedPlan === plan.type && <Check className="h-4 w-4 text-accent" />}
                                 </div>
                                 <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">
-                                  {plan.limit === 999999 ? "Unlimited" : `${plan.limit} Cards`}
+                                  {plan.limit === 999999 ? "Unlimited Cards" : `${plan.limit} Cards`}
                                 </p>
+                                <p className="text-[10px] text-muted-foreground mb-2">{plan.duration}</p>
                                 <p className="text-xs font-bold text-accent">{plan.price}</p>
                               </button>
                             ))}
@@ -401,7 +423,7 @@ export default function Dashboard() {
                       </div>
                       <DialogFooter>
                         <Button onClick={handleCreateEvent} disabled={isCreatingEvent || !eventName} className="w-full">
-                          {isCreatingEvent ? <Loader2 className="animate-spin" /> : "Continue to Payment"}
+                          {isCreatingEvent ? <Loader2 className="animate-spin" /> : (selectedPlan === "Free" ? "Start Free Trial" : "Continue to Payment")}
                         </Button>
                       </DialogFooter>
                     </>
@@ -435,6 +457,9 @@ export default function Dashboard() {
                   >
                     <span className="text-sm font-bold whitespace-nowrap">
                       {e.shortId} &bull; {e.nameEn}
+                    </span>
+                    <span className="text-[9px] uppercase font-bold opacity-60 ml-2">
+                      ({e.packageType})
                     </span>
                     {activeEventId === e.id && (
                       <div className="flex items-center gap-1 border-l border-white/20 pl-2">
@@ -481,7 +506,7 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
                  <Card className="lg:col-span-3 border-none shadow-sm overflow-hidden bg-card/50 backdrop-blur">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                       <CardTitle className="text-lg font-bold">Registry Capacity: {activeEvent.packageType} Plan</CardTitle>
+                       <CardTitle className="text-lg font-bold">Registry Capacity: {activeEvent.packageType === "Free" ? "Free Trial" : "Premium"} Plan</CardTitle>
                        <span className="px-3 py-1 bg-accent/20 text-accent rounded-full text-[10px] font-bold uppercase tracking-widest">{activeEvent.packageType}</span>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -493,7 +518,13 @@ export default function Dashboard() {
                           <p className="text-sm font-bold text-accent">{activeEvent.packageType === "Premium" ? "Unlimited" : `${Math.round((currentGuestCount / guestLimit) * 100)}%`}</p>
                        </div>
                        <Progress value={activeEvent.packageType === "Premium" ? 0 : (currentGuestCount / guestLimit) * 100} className="h-3" />
-                       <p className="text-[10px] text-muted-foreground italic">Your registry limit is locked to the <strong>{activeEvent.packageType}</strong> package purchased on activation.</p>
+                       <div className="flex items-center gap-2 mt-2">
+                          <Info className="h-3 w-3 text-accent" />
+                          <p className="text-[10px] text-muted-foreground italic">
+                            Your registry is on the <strong>{activeEvent.packageType}</strong> package. 
+                            {activeEvent.packageType === "Free" ? " Expires in 1 month." : " Expires in 3 months."}
+                          </p>
+                       </div>
                     </CardContent>
                  </Card>
                  <Card className="border-none shadow-sm bg-primary text-primary-foreground">
