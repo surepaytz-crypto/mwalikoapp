@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-lux",
+      "description": "Luxurious event hall with warm lighting and gold accents",
+      "imageUrl": "https://picsum.photos/seed/mwaliko1/1200/800",
+      "imageHint": "luxury event"
+    },
+    {
+      "id": "wedding-lux",
+      "description": "Elegant wedding table setup",
+      "imageUrl": "https://picsum.photos/seed/mwaliko2/800/600",
+      "imageHint": "wedding gala"
+    },
+    {
+      "id": "gala-dinner",
+      "description": "Grand gala dinner setup",
+      "imageUrl": "https://picsum.photos/seed/mwaliko3/800/600",
+      "imageHint": "gala dinner"
+    }
+  ]
 }
