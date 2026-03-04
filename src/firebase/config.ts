@@ -13,24 +13,28 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-export function getFirebaseApp(): FirebaseApp {
-  if (getApps().length > 0) return getApp();
-  
+export function getFirebaseApp(): FirebaseApp | null {
   const isMissingConfig = !firebaseConfig.apiKey || firebaseConfig.apiKey === 'undefined' || firebaseConfig.apiKey === '';
   
-  if (isMissingConfig && typeof window !== 'undefined') {
-    // In production/hosting this would come from environment variables.
-    // In Studio, the user must click "Link Project".
-    throw new Error("Firebase API key is missing. Please click the 'Link Project' button in the Studio toolbar above to connect your project.");
+  if (isMissingConfig) {
+    if (typeof window !== 'undefined') {
+      // On client, we want to throw so the provider catches it and shows the UI
+      throw new Error("Firebase API key is missing. Please click the 'Link Project' button in the Studio toolbar above to connect your project.");
+    }
+    // On server, return null to avoid crashing initializeApp
+    return null;
   }
-  
+
+  if (getApps().length > 0) return getApp();
   return initializeApp(firebaseConfig);
 }
 
-export function getFirebaseAuth(): Auth {
-  return getAuth(getFirebaseApp());
+export function getFirebaseAuth(): Auth | null {
+  const app = getFirebaseApp();
+  return app ? getAuth(app) : null;
 }
 
-export function getFirebaseDb(): Firestore {
-  return getFirestore(getFirebaseApp());
+export function getFirebaseDb(): Firestore | null {
+  const app = getFirebaseApp();
+  return app ? getFirestore(app) : null;
 }

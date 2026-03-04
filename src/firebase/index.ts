@@ -12,5 +12,10 @@ export function initializeFirebase() {
   const firebaseApp = getFirebaseApp();
   const auth = getFirebaseAuth();
   const db = getFirebaseDb();
+  
+  if (!firebaseApp || !auth || !db) {
+    return null;
+  }
+  
   return { firebaseApp, auth, db };
 }

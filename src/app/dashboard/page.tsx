@@ -1,16 +1,16 @@
-
 "use client";
 
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, QrCode, CheckCircle2, Loader2, Plus } from "lucide-react";
+import { Users, Calendar, QrCode, CheckCircle2, Loader2, Plus, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -20,10 +20,10 @@ export default function Dashboard() {
 
   // Protect the route
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !user && db) {
       router.push("/login");
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, db]);
 
   // Create a stable reference for the events collection
   const eventsCollectionRef = useMemoFirebase(() => (db ? collection(db, "events") : null), [db]);
@@ -52,6 +52,23 @@ export default function Dashboard() {
       totalScanned: acc.totalScanned + (event.scannedCount || 0),
     }), { totalEvents: 0, totalGuests: 0, totalScanned: 0 });
   }, [events]);
+
+  if (!db) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-20 flex flex-col items-center">
+          <Alert variant="destructive" className="max-w-md">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Firebase Not Connected</AlertTitle>
+            <AlertDescription>
+              The dashboard requires a connected Firebase project to function. Please click <strong>Link Project</strong> in the Studio toolbar above.
+            </AlertDescription>
+          </Alert>
+        </main>
+      </div>
+    );
+  }
 
   if (authLoading) {
     return (
