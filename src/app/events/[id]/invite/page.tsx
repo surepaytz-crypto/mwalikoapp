@@ -92,7 +92,6 @@ export default function InvitePage() {
     if (event) {
       if (event.categories?.length > 0 && !category) setCategory(event.categories[0]);
       
-      // Load event-specific invitation settings
       const settings = event.invitationSettings;
       if (settings) {
         if (settings.templateId) setSelectedTemplate(settings.templateId as TemplateId);
@@ -105,7 +104,6 @@ export default function InvitePage() {
         if (settings.footerText) setFooterText(settings.footerText);
         if (settings.showPhoto !== undefined) setShowPhoto(settings.showPhoto);
       } else {
-        // Defaults from event name
         const names = event.nameEn?.split("&").map(n => n.trim()) || [];
         if (names.length >= 2) {
           setBrideName(names[0]);
@@ -143,7 +141,12 @@ export default function InvitePage() {
   };
 
   const handleShareWhatsApp = () => {
-    const text = `Habari ${guestName || "Mgeni Rasmi"}! Unakaribishwa kwa furaha kwenye ${event?.nameEn}. Ukumbi: ${event?.venue}. Tarehe: ${event?.startDate ? new Date(event.startDate).toLocaleDateString() : 'TBD'}. \n\nTafadhali tumia namba yako ya tiketi kwa uhakiki: ${ticketId}\n\nAngalia kadi yako hapa! Karibu sana.`;
+    const name = guestName || "Mgeni Rasmi";
+    const eventName = event?.nameEn || "tukio letu";
+    const cat = category || "STANDARD";
+    
+    const text = `Habari ${name}, Karibu kwenye ${eventName}\n\nTICKET ID: ${ticketId}\nCATEGORY: ${cat}\n\nAsante na karibu sana.\n\nCard Powered by 360 Digital. TEL: 0614 320 858`;
+    
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -161,7 +164,6 @@ export default function InvitePage() {
       
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
-          {/* Header Actions */}
           <div className="flex flex-col md:flex-row items-center justify-between mb-8 print:hidden gap-4">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-accent/20 rounded-xl">
@@ -186,7 +188,6 @@ export default function InvitePage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* LEFT PANEL: EDITORS */}
             <div className="lg:col-span-5 space-y-6 print:hidden">
               <Tabs defaultValue="template" className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
@@ -195,7 +196,6 @@ export default function InvitePage() {
                   <TabsTrigger value="guest">Guest</TabsTrigger>
                 </TabsList>
 
-                {/* TEMPLATE PICKER */}
                 <TabsContent value="template" className="pt-4 space-y-6">
                   <div className="grid grid-cols-2 gap-3">
                     {TEMPLATES.map((tmpl) => (
@@ -236,7 +236,6 @@ export default function InvitePage() {
                   )}
                 </TabsContent>
 
-                {/* CONTENT EDITOR */}
                 <TabsContent value="content" className="pt-4 space-y-4">
                   <div className="space-y-2">
                     <Label>Invitation Title</Label>
@@ -270,7 +269,6 @@ export default function InvitePage() {
                   </div>
                 </TabsContent>
 
-                {/* GUEST DETAILS */}
                 <TabsContent value="guest" className="pt-4 space-y-4">
                   <div className="space-y-2">
                     <Label>Live Guest Preview</Label>
@@ -313,7 +311,6 @@ export default function InvitePage() {
               </Card>
             </div>
 
-            {/* RIGHT PANEL: LIVE PREVIEW */}
             <div className="lg:col-span-7 flex justify-center sticky top-24 h-fit">
               <div 
                 ref={invitationRef}
@@ -322,7 +319,6 @@ export default function InvitePage() {
                   currentTemplateDef.style
                 )}
               >
-                {/* Background Patterns for Heritage/Floral etc */}
                 {selectedTemplate === 'heritage' && (
                   <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-orange-900 to-transparent"></div>
                 )}
@@ -331,13 +327,11 @@ export default function InvitePage() {
                 )}
 
                 <div className="z-10 w-full space-y-6 flex flex-col h-full">
-                  {/* Invitation Header */}
                   <div className="space-y-2">
                     <span className="text-[10px] font-bold uppercase tracking-[0.4em] opacity-60">{inviteTitle}</span>
                     <p className="text-xs italic opacity-80">{hostText}</p>
                   </div>
 
-                  {/* Main Event Names */}
                   <div className="py-4">
                     <h2 className="font-headline text-5xl font-bold leading-tight">
                       {brideName || "Bride"} <br/>
@@ -346,7 +340,6 @@ export default function InvitePage() {
                     </h2>
                   </div>
 
-                  {/* Photo Section */}
                   {currentTemplateDef.hasPhoto && showPhoto && (
                     <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-xl border-4 border-white/10 group">
                       <Image 
@@ -363,7 +356,6 @@ export default function InvitePage() {
                   )}
 
                   <div className="flex-1 flex flex-col justify-center space-y-6">
-                    {/* Guest Section */}
                     <div className="space-y-2">
                       <p className="text-xs font-light italic opacity-60">You are cordially invited,</p>
                       <h3 className="text-2xl font-semibold px-4 border-b border-accent/20 pb-1 inline-block">
@@ -376,7 +368,6 @@ export default function InvitePage() {
                       </div>
                     </div>
 
-                    {/* Venue & Time */}
                     <div className="grid grid-cols-2 gap-4 text-xs font-medium border-y border-accent/10 py-4">
                       <div className="flex flex-col items-center gap-1 border-r border-accent/10">
                         <MapPin className="h-3 w-3 opacity-60" />
@@ -388,7 +379,6 @@ export default function InvitePage() {
                       </div>
                     </div>
 
-                    {/* QR Section */}
                     <div className="flex justify-center">
                       <div className="p-3 bg-white rounded-xl shadow-inner border border-zinc-100">
                         <QRCodeSVG 
@@ -402,7 +392,6 @@ export default function InvitePage() {
                     </div>
                   </div>
 
-                  {/* ID & Footer */}
                   <div className="space-y-3 pt-4">
                     <div className="space-y-1">
                       <p className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-40">Security Access ID</p>
