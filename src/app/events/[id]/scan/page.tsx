@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { QrCode, ArrowLeft, RefreshCw, CheckCircle2, XCircle, Search, Key, Info, MapPin, Loader2, LogOut } from "lucide-react";
@@ -13,6 +13,9 @@ import { useFirestore, useUser, useDoc, useMemoFirebase, useAuth } from "@/fireb
 import { collection, query, where, getDocs, doc, updateDoc, increment } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
+import jsQR from "jsqr";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 type Checkpoint = "GATE" | "DRINKS" | "FOOD";
 type ScanStatus = "idle" | "scanning" | "valid" | "invalid" | "used";
@@ -24,13 +27,16 @@ export default function ScanPage() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
   
   const [status, setStatus] = useState<ScanStatus>("idle");
   const [ticketIdInput, setTicketIdInput] = useState("");
   const [activeCheckpoint, setActiveCheckpoint] = useState<Checkpoint>("GATE");
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [scannedGuest, setScannedGuest] = useState<{ name: string, category: string } | null>(null);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const userDocRef = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -53,25 +59,34 @@ export default function ScanPage() {
   useEffect(() => {
     const getCameraPermission = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         setHasCameraPermission(true);
-        if (videoRef.current) videoRef.current.srcObject = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
       } catch (error) {
+        console.error('Error accessing camera:', error);
         setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'Camera Access Denied',
+          description: 'Please enable camera permissions in your browser settings to use this app.',
+        });
       }
     };
     getCameraPermission();
-  }, []);
+  }, [toast]);
 
-  const verifyTicket = async (ticketId: string) => {
-    if (!db || !eventId) return;
+  const verifyTicket = useCallback(async (ticketId: string) => {
+    if (!db || !eventId || status === "scanning") return;
     setStatus("scanning");
     setScannedGuest(null);
 
     try {
+      const cleanId = ticketId.trim();
       const q = query(
         collection(db, "events", eventId as string, "guestEvents"), 
-        where("ticketId", "==", ticketId)
+        where("ticketId", "==", cleanId)
       );
       const snapshot = await getDocs(q);
 
@@ -99,9 +114,56 @@ export default function ScanPage() {
       setScannedGuest({ name: guestData.guestName, category: guestData.category });
       setStatus("valid");
     } catch (e: any) {
+      console.error(e);
       setStatus("invalid");
     }
-  };
+  }, [db, eventId, activeCheckpoint, status]);
+
+  // QR Scanning Loop
+  useEffect(() => {
+    let animationFrameId: number;
+    
+    const scan = () => {
+      if (videoRef.current && canvasRef.current && status === 'idle') {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+
+        if (video.readyState === video.HAVE_ENOUGH_DATA && context) {
+          canvas.height = video.videoHeight;
+          canvas.width = video.videoWidth;
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+          
+          const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "dontInvert",
+          });
+
+          if (code) {
+            try {
+              // Try parsing as our app's JSON format from Invitation Center
+              const parsed = JSON.parse(code.data);
+              if (parsed.ticketId) {
+                verifyTicket(parsed.ticketId);
+              } else {
+                verifyTicket(code.data);
+              }
+            } catch (e) {
+              // Fallback to raw string
+              verifyTicket(code.data);
+            }
+          }
+        }
+      }
+      animationFrameId = requestAnimationFrame(scan);
+    };
+
+    if (hasCameraPermission && status === 'idle') {
+      scan();
+    }
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [hasCameraPermission, status, verifyTicket]);
 
   const handleManualCheck = () => {
     if (ticketIdInput.trim()) {
@@ -132,7 +194,7 @@ export default function ScanPage() {
         )}
         <div className="text-center">
           <h1 className="font-headline text-xl font-bold">Mwaliko Scanner</h1>
-          <p className="text-[10px] uppercase tracking-widest opacity-60">{event?.nameEn || "Pima & Jenifa Wedding"}</p>
+          <p className="text-[10px] uppercase tracking-widest opacity-60">{event?.nameEn || "Registry Verification"}</p>
         </div>
         <div className="w-10"></div>
       </header>
@@ -156,7 +218,9 @@ export default function ScanPage() {
         </div>
 
         <div className="relative w-full max-w-xs aspect-square border-8 border-accent/40 rounded-[2.5rem] overflow-hidden bg-black/60 flex items-center justify-center shadow-[0_0_50px_rgba(212,175,55,0.2)]">
+          {/* Main Scanning Viewport */}
           <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover opacity-80" autoPlay muted playsInline />
+          <canvas ref={canvasRef} className="hidden" />
 
           {status === "scanning" && (
             <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center space-y-4 z-10 backdrop-blur-md">
@@ -175,7 +239,7 @@ export default function ScanPage() {
                     {scannedGuest?.category}
                  </div>
                </div>
-               <Button variant="ghost" className="mt-8 text-white/70 hover:text-white" onClick={() => setStatus("idle")}>Next Scan</Button>
+               <Button variant="ghost" className="mt-8 text-white/70 hover:text-white border border-white/20" onClick={() => setStatus("idle")}>Next Scan</Button>
             </div>
           )}
 
@@ -184,7 +248,7 @@ export default function ScanPage() {
                <XCircle className="h-24 w-24 text-white mb-4" />
                <h2 className="text-4xl font-black">{t('statusInvalid')}</h2>
                <p className="text-white/80 mt-2 font-bold">Ticket not found in Registry</p>
-               <Button variant="ghost" className="mt-8 text-white/70 hover:text-white" onClick={() => setStatus("idle")}>Try Again</Button>
+               <Button variant="ghost" className="mt-8 text-white/70 hover:text-white border border-white/20" onClick={() => setStatus("idle")}>Try Again</Button>
             </div>
           )}
 
@@ -195,10 +259,11 @@ export default function ScanPage() {
                <p className="mt-4 text-white/90 font-bold leading-tight">
                 {scannedGuest?.name}<br/>already checked-in at {activeCheckpoint}
                </p>
-               <Button variant="ghost" className="mt-8 text-white/70 hover:text-white" onClick={() => setStatus("idle")}>Acknowledge</Button>
+               <Button variant="ghost" className="mt-8 text-white/70 hover:text-white border border-white/20" onClick={() => setStatus("idle")}>Acknowledge</Button>
             </div>
           )}
           
+          {/* Overlay scanning corners */}
           <div className="absolute inset-0 pointer-events-none z-30">
             <div className="absolute top-10 left-10 w-16 h-16 border-t-4 border-l-4 border-accent rounded-tl-xl opacity-60"></div>
             <div className="absolute top-10 right-10 w-16 h-16 border-t-4 border-r-4 border-accent rounded-tr-xl opacity-60"></div>
@@ -206,6 +271,15 @@ export default function ScanPage() {
             <div className="absolute bottom-10 right-10 w-16 h-16 border-b-4 border-r-4 border-accent rounded-br-xl opacity-60"></div>
           </div>
         </div>
+
+        {hasCameraPermission === false && (
+          <Alert variant="destructive" className="max-w-xs">
+            <AlertTitle>Camera Access Required</AlertTitle>
+            <AlertDescription>
+              Please allow camera access in your browser settings to verify QR invitations.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="w-full max-w-xs space-y-6">
           <div className="space-y-3">
