@@ -52,18 +52,17 @@ export default function LoginPage() {
     const demoPassword = "password123";
 
     try {
-      // Try to sign in
+      // First, try to sign in
       await signInWithEmailAndPassword(auth, demoEmail, demoPassword);
       router.push("/dashboard");
     } catch (error: any) {
-      // If user doesn't exist, try to create it
+      // If sign in fails, try to create the account (it might be the first run)
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
         try {
           await createUserWithEmailAndPassword(auth, demoEmail, demoPassword);
           router.push("/dashboard");
         } catch (createError: any) {
-          console.error("Demo Setup Error:", createError);
-          setAuthError("Demo account setup failed. Ensure Email/Password auth is enabled in Firebase Console.");
+          setAuthError(`Demo access failed: ${createError.message}. Make sure Email/Password auth is enabled in your Firebase Console.`);
         }
       } else {
         setAuthError(error.message);
