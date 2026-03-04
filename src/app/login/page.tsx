@@ -45,15 +45,17 @@ export default function LoginPage() {
 
   const handleDemoLogin = async () => {
     setLoading(true);
-    const demoEmail = "admin@mwaliko.com";
+    // Using a consistent demo account
+    const demoEmail = "demo@mwaliko.com";
     const demoPassword = "password123";
 
     try {
-      // Try signing in first
+      // First attempt to sign in
       await signInWithEmailAndPassword(auth, demoEmail, demoPassword);
       router.push("/dashboard");
     } catch (error: any) {
-      // If user doesn't exist, create it for the demo
+      // If sign-in fails due to missing user, try creating it
+      // Note: Firebase v10+ often returns 'auth/invalid-credential' for both missing user and wrong password
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
         try {
           await createUserWithEmailAndPassword(auth, demoEmail, demoPassword);
@@ -61,16 +63,18 @@ export default function LoginPage() {
         } catch (createError: any) {
           toast({
             variant: "destructive",
-            title: "Demo Access Error",
-            description: createError.message,
+            title: "Demo Setup Failed",
+            description: "We couldn't set up the demo account. Please check your Firebase console to ensure Email/Password auth is enabled.",
           });
+          console.error("Demo creation error:", createError);
         }
       } else {
         toast({
           variant: "destructive",
-          title: "Demo Access Error",
-          description: error.message,
+          title: "Connection Error",
+          description: `Firebase error (${error.code}): ${error.message}. Please verify your environment variables are correctly set.`,
         });
+        console.error("Demo login error:", error);
       }
     } finally {
       setLoading(false);
