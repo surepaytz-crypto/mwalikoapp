@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useTranslation } from "@/context/LanguageContext";
@@ -7,7 +8,7 @@ import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensil
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc } from "@/firebase";
-import { collection, query, where, addDoc, doc, updateDoc, arrayUnion, writeBatch, deleteDoc, getDocs } from "firebase/firestore";
+import { collection, query, where, addDoc, doc, updateDoc, arrayUnion, writeBatch, deleteDoc, getDocs, setDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Progress } from "@/components/ui/progress";
@@ -35,7 +36,6 @@ export default function Dashboard() {
   // Create Event Form State
   const [eventName, setEventName] = useState("");
   const [eventCapacity, setEventCapacity] = useState("500");
-  const [eventPoster, setEventPoster] = useState<string | null>(null);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
 
   // Edit Event Form State
@@ -50,7 +50,7 @@ export default function Dashboard() {
   const [staffCheckpoint, setStaffCheckpoint] = useState<"GATE" | "DRINKS" | "FOOD">("GATE");
   const [selectedEventForStaff, setSelectedEventForStaff] = useState<string>("");
 
-  // Role detection and redirection
+  // Role detection
   const userDocRef = useMemoFirebase(() => {
     if (!db || !user) return null;
     return doc(db, "users", user.uid);
@@ -63,22 +63,6 @@ export default function Dashboard() {
   }, [db, user, userProfile]);
   
   const { data: events, isLoading: eventsLoading } = useCollection(eventsQuery);
-
-  // Handle Staff Redirect: Find any event and move to scanner
-  useEffect(() => {
-    if (userProfile?.userRole === "ScannerStaff") {
-      const redirectStaff = async () => {
-        const eventsSnap = await getDocs(collection(db, "events"));
-        if (!eventsSnap.empty) {
-          // Redirect to the first available event for demo purposes
-          router.push(`/events/${eventsSnap.docs[0].id}/scan`);
-        } else {
-          toast({ variant: "destructive", title: "No Events Found", description: "Ask your admin to create a demo event." });
-        }
-      };
-      redirectStaff();
-    }
-  }, [userProfile, user, db, router, toast]);
 
   useEffect(() => {
     if (events && events.length > 0 && !activeEventId) {
@@ -113,7 +97,6 @@ export default function Dashboard() {
         categories: [], 
         isActive: true,
         eventAdminId: user.uid,
-        posterUrl: eventPoster || "https://picsum.photos/seed/mwaliko-poster/400/600",
         stats: {},
         invitedTotals: {}
       };
@@ -182,10 +165,11 @@ export default function Dashboard() {
     }
   };
 
-  const handleCsvSimulation = async (eventId: string) => {
+  const handleCsvSimulation = async (eventId: string, mode: "new" | "finished" = "new") => {
     if (!db) return;
     setIsUploading(true);
     
+    // Simulate complex guest list with "No" mapping to "Ticket ID"
     const mockData = [
       { ticketId: "ML0IQ", name: "Hon. Kassim Majaliwa", category: "VVIP" },
       { ticketId: "MA98M", name: "Mama Pima", category: "Family" },
@@ -195,50 +179,67 @@ export default function Dashboard() {
       { ticketId: "ML101", name: "Baba Pima", category: "Family" },
       { ticketId: "ML202", name: "Auntie Jane", category: "Family" },
       { ticketId: "ML303", name: "Uncle Sam", category: "Family" },
+      { ticketId: "ML404", name: "Hon. Samia Suluhu", category: "VVIP" },
+      { ticketId: "ML505", name: "Diamond Platnumz", category: "VIP" },
     ];
 
     try {
-      const importedCategories = Array.from(new Set(mockData.map(item => item.category)));
+      const categories = Array.from(new Set(mockData.map(item => item.category)));
       const categoryTotals: Record<string, number> = {};
+      const categoryScans: Record<string, any> = {};
+
       mockData.forEach(item => {
         categoryTotals[item.category] = (categoryTotals[item.category] || 0) + 1;
       });
-      
+
       const batch = writeBatch(db);
-      const eventDocRef = doc(db, "events", eventId);
-
-      const statsUpdate: any = {
-        categories: arrayUnion(...importedCategories)
-      };
-
-      importedCategories.forEach(cat => {
-        statsUpdate[`stats.${cat}.gate`] = 0;
-        statsUpdate[`stats.${cat}.drinks`] = 0;
-        statsUpdate[`stats.${cat}.food`] = 0;
-        statsUpdate[`invitedTotals.${cat}`] = categoryTotals[cat];
-      });
-
-      batch.update(eventDocRef, statsUpdate);
-
+      
       mockData.forEach((item) => {
+        const isScanned = mode === "finished" ? Math.random() > 0.2 : false;
+        const scanDrinks = mode === "finished" ? isScanned && Math.random() > 0.3 : false;
+        const scanFood = mode === "finished" ? isScanned && Math.random() > 0.4 : false;
+
+        if (isScanned) {
+          if (!categoryScans[item.category]) categoryScans[item.category] = { gate: 0, drinks: 0, food: 0 };
+          categoryScans[item.category].gate++;
+          if (scanDrinks) categoryScans[item.category].drinks++;
+          if (scanFood) categoryScans[item.category].food++;
+        }
+
         const guestRef = doc(collection(db, "events", eventId, "guestEvents"));
         batch.set(guestRef, {
           guestName: item.name,
           ticketId: item.ticketId,
           category: item.category,
           eventId: eventId,
-          scannedGate: false,
-          scannedDrinks: false,
-          scannedFood: false,
+          scannedGate: isScanned,
+          scannedDrinks: scanDrinks,
+          scannedFood: scanFood,
           qrCodeData: JSON.stringify({ eventId, ticketId: item.ticketId }),
           createdAt: new Date().toISOString()
         });
       });
 
+      const statsUpdate: any = {
+        categories: arrayUnion(...categories),
+        invitedTotals: categoryTotals
+      };
+
+      categories.forEach(cat => {
+        statsUpdate[`stats.${cat}.gate`] = categoryScans[cat]?.gate || 0;
+        statsUpdate[`stats.${cat}.drinks`] = categoryScans[cat]?.drinks || 0;
+        statsUpdate[`stats.${cat}.food`] = categoryScans[cat]?.food || 0;
+      });
+
+      batch.update(doc(db, "events", eventId), statsUpdate);
       await batch.commit();
-      toast({ title: "Import Successful", description: `${mockData.length} guests imported.` });
+      
+      toast({ 
+        title: mode === "finished" ? "Post-Event Simulation" : "Import Successful", 
+        description: `${mockData.length} guests processed with full scan history.` 
+      });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Import Failed", description: e.message });
+      toast({ variant: "destructive", title: "Simulation Failed", description: e.message });
     } finally {
       setIsUploading(false);
     }
@@ -253,6 +254,7 @@ export default function Dashboard() {
       const guests = snapshot.docs.map(doc => doc.data());
       setReportGuests(guests);
       
+      // Allow state to update and layout to settle for print
       setTimeout(() => {
         window.print();
         setIsGeneratingReport(false);
@@ -282,16 +284,8 @@ export default function Dashboard() {
     toast({ title: "Staff Assigned", description: `${staffUsername} assigned successfully.` });
   };
 
-  const handleDeleteStaff = (staffId: string) => {
-    if (!db || !activeEventId) return;
-    deleteDoc(doc(db, "events", activeEventId, "staffAssignments", staffId));
-  };
-
   if (isUserLoading || eventsLoading || profileLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
   if (!user) return null;
-
-  // If staff, show simple loading while redirect happens
-  if (userProfile?.userRole === "ScannerStaff") return <div className="min-h-screen flex items-center justify-center bg-primary text-white flex-col gap-4"><Loader2 className="h-12 w-12 animate-spin text-accent" /><p>Redirecting to Scanner...</p></div>;
 
   return (
     <div className="min-h-screen bg-background print:bg-white print:text-black">
@@ -429,11 +423,13 @@ export default function Dashboard() {
                           <DialogTitle>{t('uploadCsv')}</DialogTitle>
                           <DialogDescription>{t('importFormat')}</DialogDescription>
                         </DialogHeader>
-                        <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed rounded-lg border-muted-foreground/20 bg-muted/5">
-                          <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                          <Button onClick={() => handleCsvSimulation(activeEvent.id)} disabled={isUploading}>
-                            {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('processing')}</> : "Simulate CSV Import"}
-                          </Button>
+                        <div className="grid grid-cols-2 gap-4">
+                           <Button variant="outline" onClick={() => handleCsvSimulation(activeEvent.id, "new")} disabled={isUploading}>
+                             {isUploading ? <Loader2 className="animate-spin" /> : "Simulate New Registry"}
+                           </Button>
+                           <Button className="bg-accent text-accent-foreground" onClick={() => handleCsvSimulation(activeEvent.id, "finished")} disabled={isUploading}>
+                             {isUploading ? <Loader2 className="animate-spin" /> : "Simulate Post-Event"}
+                           </Button>
                         </div>
                       </DialogContent>
                     </Dialog>
@@ -459,28 +455,20 @@ export default function Dashboard() {
                      </Button>
                   </div>
 
-                  {(!activeEvent.categories || activeEvent.categories.length === 0) ? (
-                    <Card className="p-12 text-center border-dashed">
-                      <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-xl font-bold mb-2">No Categories Detected</h3>
-                      <p className="text-muted-foreground">Import your guest list via CSV to automatically detect and display categories.</p>
-                    </Card>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <CategoryScanCard icon={<DoorOpen className="h-5 w-5 text-accent" />} title={t('checkpointGate')} event={activeEvent} checkpoint="gate" t={t} />
-                      <CategoryScanCard icon={<GlassWater className="h-5 w-5 text-accent" />} title={t('checkpointDrinks')} event={activeEvent} checkpoint="drinks" t={t} />
-                      <CategoryScanCard icon={<Utensils className="h-5 w-5 text-accent" />} title={t('checkpointFood')} event={activeEvent} checkpoint="food" t={t} />
-                    </div>
-                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <CategoryScanCard icon={<DoorOpen className="h-5 w-5 text-accent" />} title={t('checkpointGate')} event={activeEvent} checkpoint="gate" t={t} />
+                    <CategoryScanCard icon={<GlassWater className="h-5 w-5 text-accent" />} title={t('checkpointDrinks')} event={activeEvent} checkpoint="drinks" t={t} />
+                    <CategoryScanCard icon={<Utensils className="h-5 w-5 text-accent" />} title={t('checkpointFood')} event={activeEvent} checkpoint="food" t={t} />
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="staff">
                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <Card className="lg:col-span-1 border-none shadow-sm">
+                    <Card className="lg:col-span-1">
                       <CardHeader>
                         <CardTitle className="text-lg flex items-center gap-2">
                           <UserPlus className="h-5 w-5 text-accent" />
-                          Pin Security Staff
+                          Assign Staff
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -524,7 +512,7 @@ export default function Dashboard() {
                       </CardContent>
                     </Card>
 
-                    <Card className="lg:col-span-2 border-none shadow-sm">
+                    <Card className="lg:col-span-2">
                       <CardHeader>
                         <CardTitle className="text-lg">Assigned Team for {activeEvent.nameEn}</CardTitle>
                       </CardHeader>
@@ -533,17 +521,13 @@ export default function Dashboard() {
                           {staffList?.map((staff) => (
                             <div key={staff.id} className="flex items-center justify-between p-4 bg-muted/20 rounded-lg border">
                               <div className="flex items-center gap-4">
-                                <div className="h-10 w-10 bg-accent/10 rounded-full flex items-center justify-center">
-                                  <Shield className="h-5 w-5 text-accent" />
-                                </div>
+                                <Shield className="h-5 w-5 text-accent" />
                                 <div>
                                   <p className="font-bold">{staff.username}</p>
-                                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">
-                                    {staff.assignedCheckpoint} &bull; PINNED TO EVENT
-                                  </p>
+                                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">{staff.assignedCheckpoint}</p>
                                 </div>
                               </div>
-                              <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteStaff(staff.id)}>
+                              <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteDoc(doc(db, "events", activeEventId!, "staffAssignments", staff.id))}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -556,6 +540,7 @@ export default function Dashboard() {
               </Tabs>
             </div>
 
+            {/* HIGH-END PRINT REPORT SECTION */}
             <div className="hidden print:block font-sans p-8">
               <div className="flex justify-between items-start mb-12 border-b-2 border-primary pb-8">
                 <div>
@@ -655,7 +640,7 @@ function CategoryScanCard({ icon, title, event, checkpoint, t }: { icon: React.R
           <span className="text-accent font-bold">{Math.round(percentage)}%</span>
         </div>
         <Progress value={percentage} className="h-2" />
-        <div className="grid grid-cols-1 gap-2 pt-2 max-h-48 overflow-y-auto pr-1">
+        <div className="grid grid-cols-1 gap-2 pt-2">
           {categories.map((cat: string) => (
             <div key={cat} className="bg-muted/30 p-2 rounded-lg flex justify-between items-center text-xs">
               <span className="uppercase font-bold text-muted-foreground">{cat}</span>
