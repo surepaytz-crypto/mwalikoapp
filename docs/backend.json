@@ -1,0 +1,45 @@
+{
+  "entities": {
+    "Event": {
+      "title": "Event",
+      "description": "Represents a luxury event managed within the app.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the event." },
+        "type": { "type": "string", "description": "The category of the event (e.g., Wedding, Gala)." },
+        "date": { "type": "string", "format": "date", "description": "The scheduled date of the event." },
+        "venue": { "type": "string", "description": "The location of the event." },
+        "status": { "type": "string", "enum": ["Planning", "Ongoing", "Completed"], "description": "The current stage of the event." },
+        "guestCount": { "type": "number", "description": "Total number of invited guests." },
+        "scannedCount": { "type": "number", "description": "Number of guests who have checked in." }
+      },
+      "required": ["name", "type", "date", "status"]
+    },
+    "Guest": {
+      "title": "Guest",
+      "description": "Represents a guest invited to a specific event.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The guest's full name." },
+        "email": { "type": "string", "format": "email", "description": "The guest's email address." },
+        "category": { "type": "string", "enum": ["VIP", "Standard", "Staff"], "description": "The guest's privilege level." },
+        "isScanned": { "type": "boolean", "description": "Whether the guest's QR code has been scanned." },
+        "scannedAt": { "type": "string", "format": "date-time", "description": "The timestamp of when the guest was checked in." }
+      },
+      "required": ["name", "category", "isScanned"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "password"]
+  },
+  "firestore": {
+    "/events/{eventId}": {
+      "schema": "Event",
+      "description": "Collection of all events."
+    },
+    "/events/{eventId}/guests/{guestId}": {
+      "schema": "Guest",
+      "description": "Sub-collection of guests for a specific event."
+    }
+  }
+}

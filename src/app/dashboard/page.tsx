@@ -3,12 +3,43 @@
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, QrCode, CheckCircle2 } from "lucide-react";
+import { Users, Calendar, QrCode, CheckCircle2, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useCollection, useFirestore } from "@/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useMemo } from "react";
 
 export default function Dashboard() {
   const { t } = useTranslation();
+  const db = useFirestore();
+
+  // Create a stable reference for the events collection
+  const eventsCollectionRef = useMemo(() => (db ? collection(db, "events") : null), [db]);
+  const { data: events, loading, error } = useCollection(eventsCollectionRef);
+
+  const handleCreateMockEvent = () => {
+    if (!db) return;
+    addDoc(collection(db, "events"), {
+      name: "New Luxury Gala",
+      type: "Gala",
+      date: new Date().toISOString().split('T')[0],
+      venue: "The Grand Ballroom",
+      status: "Planning",
+      guestCount: 0,
+      scannedCount: 0,
+      createdAt: serverTimestamp(),
+    });
+  };
+
+  const stats = useMemo(() => {
+    if (!events) return { totalEvents: 0, totalGuests: 0, totalScanned: 0 };
+    return events.reduce((acc, event) => ({
+      totalEvents: acc.totalEvents + 1,
+      totalGuests: acc.totalGuests + (event.guestCount || 0),
+      totalScanned: acc.totalScanned + (event.scannedCount || 0),
+    }), { totalEvents: 0, totalGuests: 0, totalScanned: 0 });
+  }, [events]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -19,16 +50,20 @@ export default function Dashboard() {
             <h1 className="font-headline text-3xl font-bold text-primary">{t('dashboard')}</h1>
             <p className="text-muted-foreground">{t('welcome')}, Admin</p>
           </div>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button 
+            onClick={handleCreateMockEvent}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="mr-2 h-4 w-4" />
             {t('createEvent')}
           </Button>
         </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard icon={<Calendar className="h-5 w-5" />} title={t('events')} value="12" label="Active this month" />
-          <StatCard icon={<Users className="h-5 w-5" />} title={t('totalGuests')} value="1,248" label="+12% from last week" />
-          <StatCard icon={<CheckCircle2 className="h-5 w-5" />} title={t('rsvpStatus')} value="842" label="Confirmed attendance" />
-          <StatCard icon={<QrCode className="h-5 w-5" />} title={t('scanned')} value="312" label="Validated today" />
+          <StatCard icon={<Calendar className="h-5 w-5" />} title={t('events')} value={stats.totalEvents.toString()} label="Active events" />
+          <StatCard icon={<Users className="h-5 w-5" />} title={t('totalGuests')} value={stats.totalGuests.toString()} label="Expected attendees" />
+          <StatCard icon={<CheckCircle2 className="h-5 w-5" />} title={t('rsvpStatus')} value={stats.totalScanned.toString()} label="Total check-ins" />
+          <StatCard icon={<QrCode className="h-5 w-5" />} title={t('scanned')} value={stats.totalScanned.toString()} label="Validated codes" />
         </div>
 
         <div className="mt-12">
@@ -37,21 +72,35 @@ export default function Dashboard() {
             <Button variant="outline" size="sm">{t('actions')}</Button>
           </div>
           
+          {loading && (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-accent" />
+            </div>
+          )}
+
+          {error && (
+            <div className="p-4 bg-destructive/10 text-destructive rounded-lg border border-destructive/20 text-center">
+              Error loading events. Please check your permissions.
+            </div>
+          )}
+
+          {!loading && !error && events?.length === 0 && (
+            <div className="p-12 border-2 border-dashed rounded-2xl text-center text-muted-foreground">
+              <p>{t('noEvents')}</p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <EventItem 
-              id="royal-gala-2024"
-              name="Royal Gala Dinner 2024"
-              date="Nov 24, 2024"
-              guests="450"
-              status="Ongoing"
-            />
-            <EventItem 
-              id="tech-summit-2024"
-              name="Modern Tech Summit"
-              date="Dec 02, 2024"
-              guests="800"
-              status="Planning"
-            />
+            {events?.map((event) => (
+              <EventItem 
+                key={event.id}
+                id={event.id}
+                name={event.name}
+                date={event.date}
+                guests={event.guestCount?.toString() || "0"}
+                status={event.status}
+              />
+            ))}
           </div>
         </div>
       </main>
