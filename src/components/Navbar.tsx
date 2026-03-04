@@ -78,7 +78,7 @@ export function Navbar() {
                     {t('login')}
                   </Button>
                 </Link>
-                <Link href="/login">
+                <Link href="/register">
                   <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
                     {t('register')}
                   </Button>

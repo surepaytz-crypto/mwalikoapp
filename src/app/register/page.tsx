@@ -16,9 +16,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Sparkles, UserPlus, Mail, ArrowRight } from "lucide-react";
+import { Loader2, Sparkles, UserPlus, Mail, ShieldCheck, ScrollText } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -29,6 +31,7 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: ""
   });
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isVerificationSent, setIsVerificationSent] = useState(false);
 
@@ -43,6 +46,10 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!agreedToTerms) {
+      toast({ variant: "destructive", title: "Terms & Conditions", description: "You must agree to the Terms and Conditions to continue." });
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
       toast({ variant: "destructive", title: "Passwords Mismatch", description: "Password and Confirm Password must match." });
       return;
@@ -52,7 +59,6 @@ export default function RegisterPage() {
     try {
       const cred = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       
-      // Provision user role and profile in Firestore
       await setDoc(doc(db, "users", cred.user.uid), {
         id: cred.user.uid,
         email: formData.email,
@@ -63,7 +69,6 @@ export default function RegisterPage() {
         createdAt: new Date().toISOString()
       });
 
-      // Send verification email
       await sendEmailVerification(cred.user);
       setIsVerificationSent(true);
       
@@ -150,10 +155,10 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       <Navbar />
       <div className="container mx-auto flex flex-col items-center justify-center p-4 py-10">
-        <Card className="w-full max-w-lg border-none shadow-2xl bg-card/50 backdrop-blur">
+        <Card className="w-full max-w-2xl border-none shadow-2xl bg-card/50 backdrop-blur">
           <CardHeader className="text-center space-y-1">
             <div className="mx-auto w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center mb-4">
               <Sparkles className="h-6 w-6 text-accent" />
@@ -162,7 +167,7 @@ export default function RegisterPage() {
             <CardDescription>Join the elite event management platform</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <Button type="button" variant="outline" className="w-full h-12 border-accent/20" onClick={handleGoogleLogin} disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : (
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -209,7 +214,58 @@ export default function RegisterPage() {
                     <Input id="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleChange} required />
                   </div>
                 </div>
-                <Button type="submit" className="w-full bg-primary h-12 text-lg font-bold" disabled={loading}>
+
+                <div className="pt-6 border-t mt-8">
+                   <div className="flex items-center gap-2 mb-3 text-primary">
+                      <ScrollText className="h-5 w-5" />
+                      <h3 className="font-bold">Terms of Service & Privacy Policy</h3>
+                   </div>
+                   <ScrollArea className="h-[200px] w-full rounded-md border bg-muted/30 p-4 text-xs leading-relaxed text-muted-foreground">
+                      <div className="space-y-4">
+                        <section>
+                          <h4 className="font-bold text-foreground">1. Introduction</h4>
+                          <p>Welcome to Mwaliko App, a product by 360 Digital. By registering an EventAdmin account, you agree to comply with our terms of service regarding AI-generated invitations, secure scanning, and data management.</p>
+                        </section>
+                        <section>
+                          <h4 className="font-bold text-foreground">2. Subscription Packages & Pricing</h4>
+                          <p><strong>Free Trial:</strong> Limited to 200 guest cards, 1 event, and 1 month of access. This trial is a one-time offer per user. Attempting to circumvent this limit via multiple accounts is a violation of these terms.</p>
+                          <p><strong>Premium Package:</strong> Charged at 350,000 TZS for 2 months of unlimited card generation and multiple events. Payments are non-refundable once the registry activation is processed.</p>
+                        </section>
+                        <section>
+                          <h4 className="font-bold text-foreground">3. AI Rendering & Content</h4>
+                          <p>Mwaliko uses Google Gemini AI to generate invitation designs. While we strive for high-quality renders, 360 Digital does not guarantee absolute visual accuracy. Users are responsible for reviewing AI-rendered content before sharing.</p>
+                        </section>
+                        <section>
+                          <h4 className="font-bold text-foreground">4. Data Privacy</h4>
+                          <p>We collect guest names and phone numbers solely for the purpose of generating QR codes and facilitating WhatsApp invitation delivery. We do not sell or share your guest lists with third parties. As an Admin, you are responsible for the accuracy of the CSV data you upload.</p>
+                        </section>
+                        <section>
+                          <h4 className="font-bold text-foreground">5. Security Scanning</h4>
+                          <p>The 3-point scanning system (Gate, Drinks, Food) is a digital verification tool. While highly accurate, the final security responsibility at the event venue lies with the event organizer and their staff.</p>
+                        </section>
+                        <section>
+                          <h4 className="font-bold text-foreground">6. Termination</h4>
+                          <p>We reserve the right to suspend accounts that engage in fraudulent simulation of payments or misuse the "Unlimited" feature for non-event related bulk data processing.</p>
+                        </section>
+                      </div>
+                   </ScrollArea>
+                   <div className="flex items-start space-x-2 pt-4">
+                    <Checkbox 
+                      id="terms" 
+                      checked={agreedToTerms} 
+                      onCheckedChange={(v) => setAgreedToTerms(v as boolean)} 
+                      className="mt-1"
+                    />
+                    <label
+                      htmlFor="terms"
+                      className="text-xs font-medium leading-relaxed peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      I have read and agree to the 360 Digital Terms of Service, including the AI usage policy and subscription pricing.
+                    </label>
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full bg-primary h-14 text-lg font-bold mt-6 shadow-xl" disabled={loading || !agreedToTerms}>
                   {loading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <UserPlus className="h-5 w-5 mr-2" />}
                   Create Admin Account
                 </Button>
