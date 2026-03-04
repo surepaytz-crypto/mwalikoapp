@@ -4,7 +4,7 @@
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag } from "lucide-react";
+import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen, Settings, Tag, UserPlus, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
@@ -12,9 +12,10 @@ import { collection, query, where, addDoc, doc, updateDoc, arrayUnion } from "fi
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -22,6 +23,7 @@ export default function Dashboard() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const [newCategory, setNewCategory] = useState("");
+  const [staffEmail, setStaffEmail] = useState("");
 
   const eventsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -62,6 +64,13 @@ export default function Dashboard() {
     setNewCategory("");
   };
 
+  const handleAssignStaff = (eventId: string) => {
+    // In a real app, we would look up the user by email or ID
+    // and add a record to events/{eventId}/staffAssignments/{userId}
+    console.log(`Assigning ${staffEmail} to event ${eventId}`);
+    setStaffEmail("");
+  };
+
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push("/login");
@@ -87,12 +96,13 @@ export default function Dashboard() {
               <Dialog>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="border-accent text-accent">
-                    <Tag className="mr-2 h-4 w-4" /> {t('manageCategories')}
+                    <Settings className="mr-2 h-4 w-4" /> {t('manageCategories')}
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-md">
                   <DialogHeader>
                     <DialogTitle>{t('manageCategories')}</DialogTitle>
+                    <DialogDescription>Define your guest tiers for precise scanning analytics.</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 pt-4">
                     <div className="flex flex-wrap gap-2">
@@ -128,30 +138,67 @@ export default function Dashboard() {
         </div>
 
         {activeEvent && (
-          <div className="mt-12 space-y-8">
-            <h2 className="font-headline text-2xl font-bold">Category Analytics - {activeEvent.nameEn}</h2>
+          <Tabs defaultValue="analytics" className="mt-12">
+            <TabsList className="grid w-full grid-cols-2 max-w-[400px] mb-8">
+              <TabsTrigger value="analytics">Category Analytics</TabsTrigger>
+              <TabsTrigger value="staff">Staff Management</TabsTrigger>
+            </TabsList>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <ScanAnalyticsCard 
-                icon={<DoorOpen className="h-5 w-5 text-accent" />} 
-                title={t('checkpointGate')} 
-                event={activeEvent}
-                checkpoint="gate"
-              />
-              <ScanAnalyticsCard 
-                icon={<GlassWater className="h-5 w-5 text-accent" />} 
-                title={t('checkpointDrinks')} 
-                event={activeEvent}
-                checkpoint="drinks"
-              />
-              <ScanAnalyticsCard 
-                icon={<Utensils className="h-5 w-5 text-accent" />} 
-                title={t('checkpointFood')} 
-                event={activeEvent}
-                checkpoint="food"
-              />
-            </div>
-          </div>
+            <TabsContent value="analytics" className="space-y-8">
+              <h2 className="font-headline text-2xl font-bold">Live 3-Point Analytics - {activeEvent.nameEn}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <ScanAnalyticsCard 
+                  icon={<DoorOpen className="h-5 w-5 text-accent" />} 
+                  title={t('checkpointGate')} 
+                  event={activeEvent}
+                  checkpoint="gate"
+                />
+                <ScanAnalyticsCard 
+                  icon={<GlassWater className="h-5 w-5 text-accent" />} 
+                  title={t('checkpointDrinks')} 
+                  event={activeEvent}
+                  checkpoint="drinks"
+                />
+                <ScanAnalyticsCard 
+                  icon={<Utensils className="h-5 w-5 text-accent" />} 
+                  title={t('checkpointFood')} 
+                  event={activeEvent}
+                  checkpoint="food"
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="staff">
+              <Card className="border-none shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-accent" />
+                    Staff Access Control
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex gap-4 items-end">
+                    <div className="flex-1 space-y-2">
+                      <Label>Staff Email or User ID</Label>
+                      <Input 
+                        placeholder="staff@mwaliko.com" 
+                        value={staffEmail}
+                        onChange={(e) => setStaffEmail(e.target.value)}
+                      />
+                    </div>
+                    <Button onClick={() => handleAssignStaff(activeEvent.id)}>
+                      <UserPlus className="mr-2 h-4 w-4" /> Assign Scanner
+                    </Button>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4 bg-muted/20">
+                    <h4 className="text-sm font-bold mb-2">Assigned Scanner Staff</h4>
+                    <p className="text-xs text-muted-foreground italic">No staff assigned yet. Assigned staff will be able to use the "Scanner" page for this event.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         )}
 
         <div className="mt-12">
@@ -180,7 +227,6 @@ export default function Dashboard() {
 }
 
 function ScanAnalyticsCard({ icon, title, event, checkpoint }: { icon: React.ReactNode, title: string, event: any, checkpoint: string }) {
-  // Mock aggregation for UI demonstration
   const categories = event.categories || ["VIP", "Standard"];
   const totalScanned = categories.reduce((acc: number, cat: string) => acc + (event.stats?.[cat]?.[checkpoint] || 0), 0);
   const totalPossible = event.guestCapacity || 100;
