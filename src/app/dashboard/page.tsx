@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useTranslation } from "@/context/LanguageContext";
@@ -57,12 +56,12 @@ export default function Dashboard() {
     if (!db) return;
     setIsUploading(true);
     
-    // New CSV Format: Ticket Number, Name, Category
+    // New CSV Format matching request: Ticket Number, Name, Category
     const mockData = [
-      { ticketId: "MW-778899", name: "Hon. Kassim Majaliwa", category: "VIP" },
-      { ticketId: "MW-112233", name: "John Doe", category: "Standard" },
-      { ticketId: "MW-445566", name: "Jane Smith", category: "Standard" },
-      { ticketId: "MW-990011", name: "Salum Khalfan", category: "VVIP" },
+      { ticketId: "ML-A12", name: "Hon. Kassim Majaliwa", category: "VIP" },
+      { ticketId: "MW-0IQ", name: "John Doe", category: "Standard" },
+      { ticketId: "MA-98M", name: "Jane Smith", category: "Standard" },
+      { ticketId: "ML-K72", name: "Salum Khalfan", category: "VVIP" },
     ];
 
     try {
@@ -82,7 +81,7 @@ export default function Dashboard() {
         });
       });
       await batch.commit();
-      toast({ title: "Import Successful", description: `${mockData.length} guests imported from CSV (Ticket Number, Name, Category).` });
+      toast({ title: "Import Successful", description: `${mockData.length} guests imported with new ticket format (e.g., MW-0IQ).` });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Import Failed", description: e.message });
     } finally {

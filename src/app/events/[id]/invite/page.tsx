@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -24,7 +23,7 @@ export default function InvitePage() {
   
   const [guestName, setGuestName] = useState("");
   const [category, setCategory] = useState("");
-  const [ticketId, setTicketId] = useState(""); // Initialize empty to avoid hydration mismatch
+  const [ticketId, setTicketId] = useState(""); 
   const invitationRef = useRef<HTMLDivElement>(null);
 
   const eventRef = useMemoFirebase(() => {
@@ -34,9 +33,19 @@ export default function InvitePage() {
 
   const { data: event, isLoading } = useDoc(eventRef);
 
-  // Set initial random ticket ID and category on client-side mount
+  const generateTicketId = () => {
+    const prefixes = ["ML", "MW", "MA"];
+    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let randomPart = "";
+    for (let i = 0; i < 3; i++) {
+      randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `${prefix}-${randomPart}`;
+  };
+
   useEffect(() => {
-    setTicketId(`MW-${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
+    setTicketId(generateTicketId());
     if (event && event.categories && event.categories.length > 0 && !category) {
       setCategory(event.categories[0]);
     }
@@ -114,7 +123,7 @@ export default function InvitePage() {
                     <Label>Ticket ID</Label>
                     <div className="flex gap-2">
                       <Input value={ticketId} readOnly className="bg-muted font-mono" />
-                      <Button variant="outline" onClick={() => setTicketId(`MW-${Math.random().toString(36).substring(2, 8).toUpperCase()}`)}>
+                      <Button variant="outline" onClick={() => setTicketId(generateTicketId())}>
                         Regen
                       </Button>
                     </div>
