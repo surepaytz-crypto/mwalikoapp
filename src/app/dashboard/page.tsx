@@ -4,14 +4,13 @@
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, QrCode, CheckCircle2, Loader2, Plus, AlertCircle, TrendingUp, GlassWater, Utensils } from "lucide-react";
+import { Users, Calendar, QrCode, Loader2, Plus, TrendingUp, GlassWater, Utensils, DoorOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
-import { collection, query, where, addDoc, serverTimestamp } from "firebase/firestore";
-import { useMemo, useEffect } from "react";
+import { collection, query, where, addDoc } from "firebase/firestore";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 
 export default function Dashboard() {
@@ -25,7 +24,7 @@ export default function Dashboard() {
     return query(collection(db, "events"), where("eventAdminId", "==", user.uid));
   }, [db, user]);
   
-  const { data: events, loading, error } = useCollection(eventsCollectionRef);
+  const { data: events, loading } = useCollection(eventsCollectionRef);
 
   const handleCreateMockEvent = () => {
     if (!db || !user) return;
@@ -38,12 +37,17 @@ export default function Dashboard() {
       venue: "Serena Hotel Ballroom",
       status: "Planning",
       guestCapacity: 500,
-      vipGuests: 150,
-      standardGuests: 350,
+      vipGuestsCount: 150,
+      standardGuestsCount: 350,
       scannedGate: 0,
       scannedDrinks: 0,
       scannedFood: 0,
+      vipScannedGate: 0,
       vipScannedDrinks: 0,
+      vipScannedFood: 0,
+      standardScannedGate: 0,
+      standardScannedDrinks: 0,
+      standardScannedFood: 0,
       isActive: true,
       eventAdminId: user.uid,
     });
@@ -57,6 +61,9 @@ export default function Dashboard() {
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-accent" /></div>;
   if (!user) return null;
+
+  // Aggregate stats from all events (for demo purposes we'll use the first active event if it exists)
+  const activeEvent = events && events.length > 0 ? events[0] : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,34 +82,43 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard icon={<Calendar className="h-5 w-5" />} title={t('events')} value={events?.length.toString() || "0"} label="Active Projects" />
           <StatCard icon={<TrendingUp className="h-5 w-5" />} title="Entry Logic" value="3-Point" label="Gate, Drinks, Food" />
-          <StatCard icon={<Users className="h-5 w-5" />} title="Total Registry" value="500" label="VIP & Standard" />
-          <StatCard icon={<QrCode className="h-5 w-5" />} title="Registry Verified" value="0%" label="Pending check-ins" />
+          <StatCard icon={<Users className="h-5 w-5" />} title="Total Registry" value={activeEvent ? activeEvent.guestCapacity?.toString() : "0"} label="VIP & Standard" />
+          <StatCard icon={<QrCode className="h-5 w-5" />} title="Registry Verified" value={activeEvent ? `${Math.round((activeEvent.scannedGate / activeEvent.guestCapacity) * 100)}%` : "0%"} label="Check-in rate" />
         </div>
 
         <div className="mt-12 space-y-8">
-          <h2 className="font-headline text-2xl font-bold">Category Analytics</h2>
+          <h2 className="font-headline text-2xl font-bold">Category Analytics {activeEvent && ` - ${activeEvent.nameEn}`}</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <ScanAnalyticsCard 
-              icon={<TrendingUp className="h-5 w-5 text-accent" />} 
+              icon={<DoorOpen className="h-5 w-5 text-accent" />} 
               title={t('checkpointGate')} 
-              current={0} 
-              total={500}
-              breakdown={[{ name: "VIP", val: "0/150" }, { name: "Standard", val: "0/350" }]}
+              current={activeEvent?.scannedGate || 0} 
+              total={activeEvent?.guestCapacity || 500}
+              breakdown={[
+                { name: t('categoryVIP'), val: `${activeEvent?.vipScannedGate || 0}/${activeEvent?.vipGuestsCount || 150}` },
+                { name: t('categoryStandard'), val: `${activeEvent?.standardScannedGate || 0}/${activeEvent?.standardGuestsCount || 350}` }
+              ]}
             />
             <ScanAnalyticsCard 
               icon={<GlassWater className="h-5 w-5 text-accent" />} 
               title={t('checkpointDrinks')} 
-              current={0} 
-              total={500}
-              breakdown={[{ name: "VIP", val: "0/150" }, { name: "Standard", val: "0/350" }]}
+              current={activeEvent?.scannedDrinks || 0} 
+              total={activeEvent?.guestCapacity || 500}
+              breakdown={[
+                { name: t('categoryVIP'), val: `${activeEvent?.vipScannedDrinks || 0}/${activeEvent?.vipGuestsCount || 150}` },
+                { name: t('categoryStandard'), val: `${activeEvent?.standardScannedDrinks || 0}/${activeEvent?.standardGuestsCount || 350}` }
+              ]}
             />
             <ScanAnalyticsCard 
               icon={<Utensils className="h-5 w-5 text-accent" />} 
               title={t('checkpointFood')} 
-              current={0} 
-              total={500}
-              breakdown={[{ name: "VIP", val: "0/150" }, { name: "Standard", val: "0/350" }]}
+              current={activeEvent?.scannedFood || 0} 
+              total={activeEvent?.guestCapacity || 500}
+              breakdown={[
+                { name: t('categoryVIP'), val: `${activeEvent?.vipScannedFood || 0}/${activeEvent?.vipGuestsCount || 150}` },
+                { name: t('categoryStandard'), val: `${activeEvent?.standardScannedFood || 0}/${activeEvent?.standardGuestsCount || 350}` }
+              ]}
             />
           </div>
 
@@ -119,6 +135,11 @@ export default function Dashboard() {
                   status={event.status || "Planning"}
                 />
               ))}
+              {!loading && events?.length === 0 && (
+                <p className="text-muted-foreground col-span-2 text-center py-10 bg-muted/20 rounded-xl border-2 border-dashed">
+                  {t('noEvents')}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -130,7 +151,7 @@ export default function Dashboard() {
 function ScanAnalyticsCard({ icon, title, current, total, breakdown }: { icon: React.ReactNode, title: string, current: number, total: number, breakdown: {name: string, val: string}[] }) {
   const percentage = total > 0 ? (current / total) * 100 : 0;
   return (
-    <Card className="border-none shadow-sm">
+    <Card className="border-none shadow-sm overflow-hidden bg-card/50 backdrop-blur">
       <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-4">
         <div className="p-2 bg-accent/10 rounded-lg">{icon}</div>
         <CardTitle className="text-lg">{title}</CardTitle>

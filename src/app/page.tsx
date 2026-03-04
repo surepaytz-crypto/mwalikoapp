@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { useTranslation } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, QrCode, ShieldCheck } from "lucide-react";
+import { Calendar, Users, QrCode, ShieldCheck, GlassWater, Utensils, DoorOpen } from "lucide-react";
 
 export default function Home() {
   const { t } = useTranslation();
@@ -38,12 +38,12 @@ export default function Home() {
               </p>
               <div className="flex flex-col items-center justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
                 <Link href="/login">
-                  <Button size="lg" className="h-14 px-10 text-lg bg-accent text-accent-foreground hover:bg-accent/90 border-none shadow-xl">
+                  <Button size="lg" className="h-14 px-10 text-lg bg-accent text-accent-foreground hover:bg-accent/90 border-none shadow-xl font-bold">
                     {t('createEvent')}
                   </Button>
                 </Link>
                 <Link href="/login">
-                  <Button size="lg" className="h-14 px-10 text-lg bg-accent text-accent-foreground hover:bg-accent/90 border-none shadow-xl">
+                  <Button size="lg" className="h-14 px-10 text-lg bg-accent text-accent-foreground hover:bg-accent/90 border-none shadow-xl font-bold">
                     {t('login')}
                   </Button>
                 </Link>
@@ -68,8 +68,8 @@ export default function Home() {
               />
               <FeatureCard 
                 icon={<ShieldCheck className="h-8 w-8 text-accent" />}
-                title="Triple Scan Security"
-                description="Three-point verification logic: Main Entry, Security Check, and VIP Lounge access."
+                title="3-Point Scanning"
+                description="Secure your event with specific check-ins for the Gate, Drinks, and Food areas."
               />
               <FeatureCard 
                 icon={<QrCode className="h-8 w-8 text-accent" />}
@@ -80,25 +80,28 @@ export default function Home() {
           </div>
         </section>
 
-        {/* New 3-Point Logic Highlight */}
+        {/* 3-Point Logic Highlight */}
         <section className="py-24 bg-primary text-primary-foreground relative overflow-hidden">
           <div className="container mx-auto px-4 relative z-10 text-center max-w-4xl">
             <h2 className="font-headline text-4xl md:text-5xl font-bold mb-6">Uncompromising Security Control</h2>
             <p className="text-lg text-primary-foreground/70 font-light leading-relaxed mb-10">
-              Our 3-point scan logic ensures every phase of your event is secured. Track guest movement from the Main Entrance to the Security Check and finally to the VIP Lounge.
+              Our 3-point scan logic ensures every phase of your event is tracked. Monitor guest access from the initial entry to refreshment collection.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-6 rounded-xl bg-white/5 backdrop-blur border border-white/10">
-                <div className="text-accent font-bold text-xl mb-2">1. Main Entrance</div>
+                <DoorOpen className="h-8 w-8 text-accent mx-auto mb-4" />
+                <div className="text-accent font-bold text-xl mb-2">1. Gate</div>
                 <p className="text-sm opacity-60">Initial guest verification</p>
               </div>
               <div className="p-6 rounded-xl bg-white/5 backdrop-blur border border-white/10">
-                <div className="text-accent font-bold text-xl mb-2">2. Security Check</div>
-                <p className="text-sm opacity-60">Crowd control & screening</p>
+                <GlassWater className="h-8 w-8 text-accent mx-auto mb-4" />
+                <div className="text-accent font-bold text-xl mb-2">2. Drinks</div>
+                <p className="text-sm opacity-60">Refreshment access control</p>
               </div>
               <div className="p-6 rounded-xl bg-white/5 backdrop-blur border border-white/10">
-                <div className="text-accent font-bold text-xl mb-2">3. VIP Access</div>
-                <p className="text-sm opacity-60">Exclusive area validation</p>
+                <Utensils className="h-8 w-8 text-accent mx-auto mb-4" />
+                <div className="text-accent font-bold text-xl mb-2">3. Food</div>
+                <p className="text-sm opacity-60">Catering verification</p>
               </div>
             </div>
           </div>
