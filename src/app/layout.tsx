@@ -1,7 +1,9 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import {LanguageProvider} from '@/context/LanguageContext';
 import { FirebaseClientProvider } from '@/firebase';
+import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
   title: 'Mwaliko App | Premium Event Invitations',
@@ -24,6 +26,7 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <LanguageProvider>
             {children}
+            <Toaster />
           </LanguageProvider>
         </FirebaseClientProvider>
       </body>

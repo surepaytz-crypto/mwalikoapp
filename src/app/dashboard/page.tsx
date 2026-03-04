@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useTranslation } from "@/context/LanguageContext";
@@ -6,29 +7,40 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Calendar, QrCode, CheckCircle2, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useCollection, useFirestore } from "@/firebase";
+import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
   const { t } = useTranslation();
   const db = useFirestore();
+  const { user, loading: authLoading } = useUser();
+  const router = useRouter();
+
+  // Protect the route
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, authLoading, router]);
 
   // Create a stable reference for the events collection
-  const eventsCollectionRef = useMemo(() => (db ? collection(db, "events") : null), [db]);
+  const eventsCollectionRef = useMemoFirebase(() => (db ? collection(db, "events") : null), [db]);
   const { data: events, loading, error } = useCollection(eventsCollectionRef);
 
   const handleCreateMockEvent = () => {
     if (!db) return;
     addDoc(collection(db, "events"), {
-      name: "New Luxury Gala",
+      name: "Luxury Gala Night",
       type: "Gala",
-      date: new Date().toISOString().split('T')[0],
-      venue: "The Grand Ballroom",
+      date: new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0], // Next week
+      venue: "Serena Hotel Ballroom",
       status: "Planning",
-      guestCount: 0,
+      guestCount: 150,
       scannedCount: 0,
       createdAt: serverTimestamp(),
+      createdBy: user?.uid,
     });
   };
 
@@ -41,6 +53,16 @@ export default function Dashboard() {
     }), { totalEvents: 0, totalGuests: 0, totalScanned: 0 });
   }, [events]);
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -48,7 +70,7 @@ export default function Dashboard() {
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="font-headline text-3xl font-bold text-primary">{t('dashboard')}</h1>
-            <p className="text-muted-foreground">{t('welcome')}, Admin</p>
+            <p className="text-muted-foreground">{t('welcome')}, {user.email?.split('@')[0]}</p>
           </div>
           <Button 
             onClick={handleCreateMockEvent}
@@ -87,6 +109,9 @@ export default function Dashboard() {
           {!loading && !error && events?.length === 0 && (
             <div className="p-12 border-2 border-dashed rounded-2xl text-center text-muted-foreground">
               <p>{t('noEvents')}</p>
+              <Button variant="link" onClick={handleCreateMockEvent} className="text-accent mt-2">
+                Create your first event now
+              </Button>
             </div>
           )}
 
@@ -143,7 +168,9 @@ function EventItem({ id, name, date, guests, status }: { id: string, name: strin
               <QrCode className="mr-1 h-3 w-3" /> Scan
             </Button>
           </Link>
-          <Button variant="ghost" size="sm" className="text-xs font-bold uppercase tracking-wider text-accent">Manage</Button>
+          <Link href={`/events/${id}/invite`}>
+            <Button variant="ghost" size="sm" className="text-xs font-bold uppercase tracking-wider text-accent">Invite</Button>
+          </Link>
         </div>
       </div>
     </div>

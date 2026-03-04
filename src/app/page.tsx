@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -36,12 +37,16 @@ export default function Home() {
                 {t('luxuryDescription')}
               </p>
               <div className="flex flex-col items-center justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-                <Button size="lg" className="h-14 px-10 text-lg bg-accent text-accent-foreground hover:bg-accent/90 border-none shadow-xl">
-                  {t('createEvent')}
-                </Button>
-                <Button size="lg" variant="outline" className="h-14 px-10 text-lg border-white text-white hover:bg-white/10 backdrop-blur-md">
-                  {t('login')}
-                </Button>
+                <Link href="/login">
+                  <Button size="lg" className="h-14 px-10 text-lg bg-accent text-accent-foreground hover:bg-accent/90 border-none shadow-xl">
+                    {t('createEvent')}
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button size="lg" variant="outline" className="h-14 px-10 text-lg border-white text-white hover:bg-white/10 backdrop-blur-md">
+                    {t('login')}
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
@@ -90,9 +95,11 @@ export default function Home() {
                   Our AI engine crafts unique invitation content and templates that match the prestige of your event. 
                   Send personalized WhatsApp messages and luxurious digital cards in seconds.
                 </p>
-                <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                  Try AI Designer
-                </Button>
+                <Link href="/login">
+                  <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                    Try AI Designer
+                  </Button>
+                </Link>
               </div>
               <div className="flex-1 w-full max-w-lg aspect-video rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-8 shadow-2xl flex items-center justify-center">
                 <div className="text-center space-y-4">
