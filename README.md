@@ -1,4 +1,4 @@
-# Mwaliko App - Premium Event Invitations & Security
+git# Mwaliko App - Premium Event Invitations & Security
 
 Mwaliko is a luxurious event management platform designed for high-end weddings, galas, and corporate events. It combines elegant AI-powered invitations with a robust 3-point security scanning system.
 
