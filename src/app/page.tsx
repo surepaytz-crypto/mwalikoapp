@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Sparkles, ShieldCheck, Mail, ArrowRight } from "lucide-react";
+import { ShieldCheck, Mail, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Logo } from "@/components/Logo";
 
 export default function ComingSoonPage() {
   const [timeLeft, setTimeLeft] = useState({
@@ -57,10 +58,8 @@ export default function ComingSoonPage() {
 
       <div className="z-10 w-full max-w-4xl text-center space-y-12">
         {/* Brand Identity */}
-        <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-1000">
-          <div className="mx-auto w-20 h-20 bg-accent/20 rounded-full flex items-center justify-center mb-6 border border-accent/30 shadow-[0_0_40px_rgba(212,175,55,0.2)]">
-            <Sparkles className="h-10 w-10 text-accent" />
-          </div>
+        <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-1000 flex flex-col items-center">
+          <Logo size="xl" variant="gold" className="mb-6 shadow-[0_0_40px_rgba(212,175,55,0.3)]" />
           <h1 className="font-headline text-5xl md:text-7xl font-bold tracking-tighter">
             Mwaliko App<span className="text-accent">.</span>
           </h1>

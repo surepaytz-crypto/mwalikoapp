@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -11,6 +10,7 @@ import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import { doc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
+import { Logo } from "@/components/Logo";
 import {
   Sheet,
   SheetContent,
@@ -54,8 +54,9 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center space-x-2">
-            <span className="font-headline text-2xl font-bold tracking-tighter text-primary">
+          <Link href="/" className="flex items-center space-x-3 group">
+            <Logo size="sm" variant="gold" />
+            <span className="font-headline text-2xl font-bold tracking-tighter text-primary group-hover:text-accent transition-colors">
               Mwaliko App<span className="text-accent">.</span>
             </span>
           </Link>
@@ -91,7 +92,10 @@ export function Navbar() {
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                 <SheetHeader>
-                  <SheetTitle className="text-left font-headline text-2xl font-bold">Mwaliko App</SheetTitle>
+                  <SheetTitle className="text-left font-headline text-2xl font-bold flex items-center gap-3">
+                    <Logo size="sm" variant="gold" />
+                    Mwaliko App
+                  </SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col gap-6 mt-12">
                   {isAuthenticated && !isStaff && (

@@ -3,7 +3,7 @@
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Users, Calendar, QrCode, Loader2, Plus, GlassWater, Utensils, DoorOpen, UserPlus, Shield, FileSpreadsheet, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Sparkles, Check, Info, ArrowRight, ShieldCheck, Mail } from "lucide-react";
+import { Users, Calendar, QrCode, Loader2, Plus, GlassWater, Utensils, DoorOpen, UserPlus, Shield, FileSpreadsheet, Trash2, Image as ImageIcon, Pencil, FileText, CheckCircle, XCircle, CreditCard, Check, Info, ArrowRight, ShieldCheck, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc } from "@/firebase";
@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { sendEmailVerification } from "firebase/auth";
+import { Logo } from "@/components/Logo";
 
 type PackageType = "Free" | "Premium";
 type CreationStage = "plans" | "payment" | "details";
@@ -361,7 +362,8 @@ export default function Dashboard() {
         <Navbar />
         <div className="container mx-auto flex flex-col items-center justify-center p-4 py-20">
           <Card className="w-full max-w-lg border-none shadow-[0_35px_60px_-15px_rgba(0,0,0,0.1)] bg-card overflow-hidden">
-             <div className="bg-primary p-8 text-center">
+             <div className="bg-primary p-8 flex flex-col items-center gap-4">
+                <Logo size="lg" variant="gold" />
                 <h2 className="text-accent font-headline text-3xl font-bold tracking-[0.2em]">MWALIKO APP</h2>
              </div>
             <CardHeader className="text-center pb-2">
@@ -456,7 +458,7 @@ export default function Dashboard() {
                             >
                               <div className="flex justify-between items-start mb-4">
                                 <div className="p-3 bg-white rounded-xl shadow-sm border border-muted group-hover:border-accent/30">
-                                  {plan.type === "Free" ? <Sparkles className="h-6 w-6 text-accent" /> : <ShieldCheck className="h-6 w-6 text-accent" />}
+                                  {plan.type === "Free" ? <Mail className="h-6 w-6 text-accent" /> : <ShieldCheck className="h-6 w-6 text-accent" />}
                                 </div>
                                 {selectedPlan === plan.type && <Check className="h-5 w-5 text-accent" />}
                               </div>
@@ -553,7 +555,7 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
             <StatStat icon={<Calendar className="h-5 w-5" />} title={t('events')} value={events?.length.toString() || "0"} label="Total Created" />
-            <StatStat icon={<Sparkles className="h-5 w-5" />} title="Digital Invites" value={currentGuestCount.toString()} label="Invitations Ready" />
+            <StatStat icon={<Mail className="h-5 w-5" />} title="Digital Invites" value={currentGuestCount.toString()} label="Invitations Ready" />
             <StatStat icon={<Users className="h-5 w-5" />} title="Total Capacity" value={events?.reduce((acc, e) => acc + (e.guestLimit || 0), 0).toString() || "0"} label="Registered Scale" />
             {hasActivePremium ? (
               <StatStat 
@@ -756,7 +758,11 @@ export default function Dashboard() {
                    <p className="text-muted-foreground uppercase tracking-widest font-bold">Registry Status Report &bull; {activeEvent.shortId}</p>
                    <p className="text-sm mt-2">{new Date().toLocaleString()}</p>
                 </div>
-                <div className="text-right"><div className="text-2xl font-bold text-accent">Mwaliko App.</div><p className="text-xs opacity-50">Premium Event Management</p></div>
+                <div className="text-right flex flex-col items-end gap-2">
+                  <Logo size="sm" variant="gold" />
+                  <div className="text-2xl font-bold text-accent">Mwaliko App.</div>
+                  <p className="text-xs opacity-50">Premium Event Management</p>
+                </div>
               </div>
               <div className="grid grid-cols-3 gap-8 mb-12">
                 <PrintStatCard title={t('checkpointGate')} event={activeEvent} checkpoint="gate" t={t} />

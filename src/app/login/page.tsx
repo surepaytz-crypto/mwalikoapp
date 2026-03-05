@@ -15,11 +15,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Sparkles, LogIn, Shield, Eye, EyeOff } from "lucide-react";
+import { Loader2, LogIn, Shield, Eye, EyeOff } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -145,8 +146,8 @@ export default function LoginPage() {
       <div className="container mx-auto flex flex-col items-center justify-center p-4 py-20">
         <Card className="w-full max-w-md border-none shadow-2xl bg-card/50 backdrop-blur">
           <CardHeader className="text-center space-y-1">
-            <div className="mx-auto w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center mb-4">
-              <Sparkles className="h-6 w-6 text-accent" />
+            <div className="flex justify-center mb-4">
+              <Logo size="md" variant="gold" />
             </div>
             <CardTitle className="text-3xl font-headline font-bold">Mwaliko App Login</CardTitle>
             <CardDescription>Secure access for Admins and Staff</CardDescription>
@@ -162,7 +163,7 @@ export default function LoginPage() {
                 <form onSubmit={handleAdminLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="admin@mwalikoapp.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    <Input id="email" type="email" placeholder="chachasteven@mwalikoapp.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">

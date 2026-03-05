@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -16,11 +15,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Sparkles, UserPlus, Mail, ShieldCheck, ScrollText, Eye, EyeOff } from "lucide-react";
+import { Loader2, UserPlus, Mail, ShieldCheck, ScrollText, Eye, EyeOff } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Logo } from "@/components/Logo";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -132,8 +132,9 @@ export default function RegisterPage() {
         <Navbar />
         <div className="container mx-auto flex flex-col items-center justify-center p-4 py-20">
           <Card className="w-full max-w-lg border-none shadow-[0_35px_60px_-15px_rgba(0,0,0,0.2)] bg-card overflow-hidden">
-             <div className="bg-primary p-10 text-center">
-                <h2 className="text-accent font-headline text-4xl font-bold tracking-[0.2em]">MWALIKO APP</h2>
+             <div className="bg-primary p-10 flex flex-col items-center gap-4">
+                <Logo size="lg" variant="gold" />
+                <h2 className="text-accent font-headline text-3xl font-bold tracking-[0.2em]">MWALIKO APP</h2>
              </div>
             <CardHeader className="text-center pt-10">
               <div className="mx-auto w-24 h-24 bg-accent/10 rounded-full flex items-center justify-center mb-6 border border-accent/20">
@@ -182,8 +183,8 @@ export default function RegisterPage() {
       <div className="container mx-auto flex flex-col items-center justify-center p-4 py-10">
         <Card className="w-full max-w-2xl border-none shadow-2xl bg-card/50 backdrop-blur">
           <CardHeader className="text-center space-y-1">
-            <div className="mx-auto w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center mb-4">
-              <Sparkles className="h-6 w-6 text-accent" />
+            <div className="flex justify-center mb-4">
+              <Logo size="md" variant="gold" />
             </div>
             <CardTitle className="text-3xl font-headline font-bold">Admin Registration</CardTitle>
             <CardDescription>Join the elite event management platform</CardDescription>

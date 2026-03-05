@@ -3,7 +3,7 @@
 import { useTranslation } from "@/context/LanguageContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Calendar, QrCode, Loader2, Plus, Sparkles, MapPin, Users, ArrowRight, ShieldCheck, Search } from "lucide-react";
+import { Calendar, Loader2, Plus, MapPin, Users, ArrowRight, Search, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { Logo } from "@/components/Logo";
 
 export default function EventsPage() {
   const { t } = useTranslation();
@@ -88,7 +89,7 @@ export default function EventsPage() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-primary/5">
-                      <Sparkles className="h-12 w-12 text-accent/20" />
+                      <Logo size="lg" variant="gold" className="opacity-20" />
                     </div>
                   )}
                   <div className="absolute top-4 right-4">
@@ -153,7 +154,7 @@ export default function EventsPage() {
         ) : (
           <div className="text-center py-20 bg-card/50 rounded-3xl border border-dashed border-primary/20">
             <div className="mx-auto w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center mb-6">
-              <Calendar className="h-10 w-10 text-accent opacity-40" />
+              <Mail className="h-10 w-10 text-accent opacity-40" />
             </div>
             <h2 className="text-2xl font-headline font-bold mb-2">No Registries Found</h2>
             <p className="text-muted-foreground mb-8 max-w-sm mx-auto">
