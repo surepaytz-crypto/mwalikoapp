@@ -7,6 +7,9 @@ import { Toaster } from '@/components/ui/toaster';
 export const metadata: Metadata = {
   title: 'Mwaliko App | Premium Event Invitations',
   description: 'Luxurious event management and guest invitation platform for elite celebrations.',
+  icons: {
+    icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2248%22 fill=%22%231a202c%22 stroke=%22%23D4AF37%22 stroke-width=%224%22/><text x=%2250%%22 y=%2255%%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22serif%22 font-weight=%22bold%22 font-size=%2245%22 fill=%22%23D4AF37%22>MA</text></svg>',
+  },
   appleWebApp: {
     title: 'Mwaliko App',
     statusBarStyle: 'default',
