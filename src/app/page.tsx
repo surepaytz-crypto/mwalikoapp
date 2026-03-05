@@ -15,22 +15,23 @@ export default function ComingSoonPage() {
     seconds: 0,
   });
 
-  useEffect(() => {
-    // Set target date to 7 days from now
-    const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() + 7);
-    const targetTime = targetDate.getTime();
+  // Fixed Target Date: March 10, 2025, at 15:26 (3:26 PM)
+  // This ensures the countdown is persistent and real for all visitors.
+  const LAUNCH_DATE = new Date("2025-03-10T15:26:00").getTime();
 
+  useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date().getTime();
-      const difference = targetTime - now;
+      const difference = LAUNCH_DATE - now;
 
       if (difference <= 0) {
         clearInterval(timer);
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
         return;
       }
 
       setTimeLeft({
+        days: Math.floor(difference / (100 * 60 * 60 * 24)),
         days: Math.floor(difference / (1000 * 60 * 60 * 24)),
         hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
         minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
@@ -39,7 +40,7 @@ export default function ComingSoonPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [LAUNCH_DATE]);
 
   return (
     <div className="min-h-screen bg-primary flex flex-col items-center justify-center relative overflow-hidden font-body text-primary-foreground p-6">
@@ -68,8 +69,8 @@ export default function ComingSoonPage() {
           </p>
         </div>
 
-        {/* Countdown Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 max-w-2xl mx-auto">
+        {/* Countdown Grid - Highly Responsive */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 max-w-3xl mx-auto">
           <TimeBlock value={timeLeft.days} label="Days" />
           <TimeBlock value={timeLeft.hours} label="Hours" />
           <TimeBlock value={timeLeft.minutes} label="Minutes" />
@@ -77,20 +78,20 @@ export default function ComingSoonPage() {
         </div>
 
         {/* Mission Statement */}
-        <div className="max-w-xl mx-auto space-y-6">
+        <div className="max-w-xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
           <p className="text-lg md:text-xl font-light leading-relaxed opacity-80">
             We are refining the ultimate registry and security experience for distinguished celebrations. Hosted by <strong>360 Digital</strong>.
           </p>
           
-          <div className="flex flex-col sm:flex-row items-center gap-3 pt-4">
-             <div className="relative flex-1 w-full">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40" />
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+             <div className="relative flex-1 w-full group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 opacity-40 group-focus-within:text-accent group-focus-within:opacity-100 transition-all" />
                 <Input 
                   placeholder="Enter your email for early access" 
-                  className="h-14 pl-12 bg-white/5 border-white/20 text-white placeholder:text-white/30 rounded-xl"
+                  className="h-14 pl-12 bg-white/5 border-white/20 text-white placeholder:text-white/30 rounded-xl focus:ring-accent focus:border-accent transition-all"
                 />
              </div>
-             <Button className="h-14 px-8 bg-accent text-accent-foreground font-bold rounded-xl hover:bg-accent/90 shadow-xl w-full sm:w-auto">
+             <Button className="h-14 px-8 bg-accent text-accent-foreground font-bold rounded-xl hover:bg-accent/90 shadow-xl w-full sm:w-auto transition-transform active:scale-95">
                 Notify Me <ArrowRight className="ml-2 h-4 w-4" />
              </Button>
           </div>
@@ -113,11 +114,13 @@ export default function ComingSoonPage() {
 
 function TimeBlock({ value, label }: { value: number; label: string }) {
   return (
-    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 flex flex-col items-center justify-center shadow-2xl transition-transform hover:scale-105 duration-300">
-      <span className="text-4xl md:text-6xl font-black font-mono text-white mb-2 tracking-tighter">
-        {value.toString().padStart(2, '0')}
-      </span>
-      <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-accent opacity-80">
+    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 md:p-8 flex flex-col items-center justify-center shadow-2xl transition-all hover:bg-white/10 hover:scale-105 duration-300">
+      <div className="relative overflow-hidden h-12 md:h-16 flex items-center justify-center">
+        <span key={value} className="text-4xl md:text-6xl font-black font-mono text-white tracking-tighter animate-in slide-in-from-top-2 duration-300">
+          {value.toString().padStart(2, '0')}
+        </span>
+      </div>
+      <span className="text-[9px] md:text-xs font-bold uppercase tracking-widest text-accent mt-2 opacity-80">
         {label}
       </span>
     </div>
